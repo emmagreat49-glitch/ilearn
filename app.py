@@ -1523,6 +1523,7 @@ def add_security_headers(response):
     response.headers.pop("Server", None)
     return response
 
+init_db()
 
 if __name__ == "__main__":
     print("🚀 Starting iLEARN...")
