@@ -1,0 +1,450 @@
+{% from "_icons.html" import icon, course_icon %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>iLEARN — Analytics Dashboard</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}">
+  <script src="{{ url_for('static', filename='js/theme.js') }}"></script>
+  <style>
+    .analytics-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 1rem;
+      margin-bottom: 1.75rem;
+    }
+    .kpi-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 1.25rem 1.4rem;
+      transition: all 0.25s;
+    }
+    .kpi-card:hover { border-color: var(--border-2); transform: translateY(-2px); }
+    .kpi-icon {
+      width: 42px; height: 42px; border-radius: 11px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.2rem; margin-bottom: 0.75rem;
+    }
+    .kpi-num {
+      font-family: var(--font-display); font-size: 2rem; font-weight: 700;
+      color: var(--white); line-height: 1;
+    }
+    .kpi-label { font-size: 0.75rem; color: var(--text-3); margin-top: 4px; }
+
+    .charts-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.25rem;
+    }
+    .chart-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-xl);
+      padding: 1.5rem;
+      overflow: hidden;
+    }
+    .chart-card.wide { grid-column: 1 / -1; }
+    .chart-title {
+      font-family: var(--font-display); font-size: 0.9rem; font-weight: 700;
+      color: var(--white); margin-bottom: 1rem;
+      display: flex; align-items: center; gap: 7px;
+    }
+    .chart-card img { width: 100%; border-radius: var(--radius); display: block; }
+
+    /* Java report section */
+    .java-panel {
+      background: var(--surface);
+      border: 1px solid rgba(251,191,36,0.2);
+      border-left: 4px solid var(--amber);
+      border-radius: var(--radius-xl);
+      padding: 1.5rem;
+      margin-bottom: 1.5rem;
+    }
+    .java-hd {
+      display: flex; align-items: center; gap: 10px;
+      margin-bottom: 1rem;
+    }
+    .java-badge {
+      background: rgba(251,191,36,0.12);
+      border: 1px solid rgba(251,191,36,0.25);
+      color: var(--amber);
+      font-size: 0.7rem; font-weight: 700; font-family: var(--font-display);
+      padding: 3px 10px; border-radius: 99px; text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+    .java-title {
+      font-family: var(--font-display); font-size: 1rem; font-weight: 700; color: var(--white);
+    }
+    .java-stats-row { display: flex; gap: 1.5rem; flex-wrap: wrap; margin-bottom: 1.25rem; }
+    .java-stat { }
+    .java-stat-num {
+      font-family: var(--font-display); font-size: 1.6rem; font-weight: 700;
+      color: var(--amber); line-height: 1;
+    }
+    .java-stat-lbl { font-size: 0.72rem; color: var(--text-3); margin-top: 3px; }
+
+    .grade-table { width: 100%; border-collapse: collapse; }
+    .grade-table th {
+      background: var(--surface-3);
+      color: var(--amber); font-size: 0.73rem; text-transform: uppercase;
+      letter-spacing: 0.07em; padding: 8px 14px; text-align: left;
+      font-family: var(--font-display);
+    }
+    .grade-table td {
+      padding: 9px 14px; border-top: 1px solid var(--border);
+      font-size: 0.85rem; color: var(--text);
+    }
+    .grade-table tr:hover td { background: rgba(251,191,36,0.03); }
+    .grade-pill {
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 34px; height: 24px; border-radius: 6px;
+      font-weight: 700; font-size: 0.78rem; font-family: var(--font-display);
+    }
+    .grade-A  { background: rgba(52,211,153,0.15); color: var(--green); }
+    .grade-B  { background: rgba(79,172,254,0.15); color: var(--blue); }
+    .grade-C  { background: rgba(34,211,238,0.15); color: var(--cyan); }
+    .grade-D  { background: rgba(251,191,36,0.15); color: var(--amber); }
+    .grade-F  { background: rgba(248,113,113,0.15); color: var(--rose); }
+
+    .run-java-btn { margin-top: 1rem; }
+
+    /* Tech stack legend */
+    .tech-legend {
+      display: flex; gap: 1rem; flex-wrap: wrap;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 1rem 1.5rem;
+      margin-bottom: 1.5rem;
+    }
+    .tech-pill {
+      display: inline-flex; align-items: center; gap: 6px;
+      font-size: 0.78rem; font-weight: 600; font-family: var(--font-display);
+      padding: 5px 12px; border-radius: 99px;
+    }
+    .tech-py     { background: rgba(79,172,254,0.1);  border: 1px solid rgba(79,172,254,0.25);  color: var(--blue); }
+    .tech-js     { background: rgba(251,191,36,0.1);  border: 1px solid rgba(251,191,36,0.25);  color: var(--amber); }
+    .tech-java   { background: rgba(248,113,113,0.1); border: 1px solid rgba(248,113,113,0.25); color: var(--rose); }
+    .tech-css    { background: rgba(167,139,250,0.1); border: 1px solid rgba(167,139,250,0.25); color: var(--purple); }
+    .tech-ds     { background: rgba(52,211,153,0.1);  border: 1px solid rgba(52,211,153,0.25);  color: var(--green); }
+
+    @media (max-width: 900px) {
+      .analytics-grid { grid-template-columns: repeat(2, 1fr); }
+      .charts-grid { grid-template-columns: 1fr; }
+      .chart-card.wide { grid-column: 1; }
+    }
+    @media (max-width: 500px) {
+      .analytics-grid { grid-template-columns: 1fr 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<nav class="navbar">
+  <div class="nav-brand">iLEARN<sup>BETA</sup></div>
+  <div class="nav-links">
+    <a href="/dashboard">Dashboard</a>
+    <a href="/support">Support</a>
+    <a href="/analytics" class="active">Analytics</a>
+  </div>
+  <div class="nav-right">
+    <div class="nav-avatar">{{ (full_name or username)[0].upper() }}</div>
+    <span class="nav-username">{{ full_name or username }}</span>
+    <button class="theme-toggle" onclick="Theme.toggle()">☀️ Light mode</button>
+    <a href="/logout" class="btn-nav-logout">Sign Out</a>
+  </div>
+  <!-- Mobile hamburger (shown only on mobile via CSS) -->
+  <button class="nav-hamburger" onclick="openDrawer()" aria-label="Open menu">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+  </button>
+</nav>
+
+<div class="page-wrap">
+
+  <!-- Breadcrumb -->
+  <div class="breadcrumb mb-3">
+    <a href="/dashboard">Dashboard</a>
+    <span></span>
+    <span>Analytics</span>
+  </div>
+
+  <!-- Tech stack legend -->
+  <div class="tech-legend">
+    <span class="text-xs text-muted2" style="align-self:center; white-space:nowrap">Tech stack:</span>
+    <span class="tech-pill tech-py"> Python — Flask backend + database queries</span>
+    <span class="tech-pill tech-ds"> Data Science — pandas, matplotlib, seaborn charts</span>
+    <span class="tech-pill tech-java"> Java — GradeAnalyzer.java grade engine</span>
+    <span class="tech-pill tech-js"> JavaScript — UI interactions + notifications</span>
+    <span class="tech-pill tech-css"> CSS — all styling (separate file)</span>
+  </div>
+
+  <!-- KPI Cards -->
+  <div class="analytics-grid">
+    <div class="kpi-card reveal">
+      <div class="kpi-icon" style="background:rgba(79,172,254,0.12)">👥</div>
+      <div class="kpi-num">{{ stats.total_users }}</div>
+      <div class="kpi-label">Total Students Registered</div>
+    </div>
+    <div class="kpi-card reveal reveal-delay-1">
+      <div class="kpi-icon" style="background:rgba(52,211,153,0.12)"></div>
+      <div class="kpi-num">{{ stats.total_completions }}</div>
+      <div class="kpi-label">Lesson Completions</div>
+    </div>
+    <div class="kpi-card reveal reveal-delay-2">
+      <div class="kpi-icon" style="background:rgba(167,139,250,0.12)"></div>
+      <div class="kpi-num">{{ stats.active_users }}</div>
+      <div class="kpi-label">Active Learners</div>
+    </div>
+    <div class="kpi-card reveal reveal-delay-3">
+      <div class="kpi-icon" style="background:rgba(251,191,36,0.12)">📈</div>
+      <div class="kpi-num">{{ stats.completion_rate }}%</div>
+      <div class="kpi-label">Overall Completion Rate</div>
+    </div>
+    <div class="kpi-card reveal">
+      <div class="kpi-icon" style="background:rgba(34,211,238,0.12)"></div>
+      <div class="kpi-num">{{ stats.total_lessons }}</div>
+      <div class="kpi-label">Total Lessons Available</div>
+    </div>
+    <div class="kpi-card reveal reveal-delay-1">
+      <div class="kpi-icon" style="background:rgba(248,113,113,0.12)"></div>
+      <div class="kpi-num">{{ stats.quiz_questions }}</div>
+      <div class="kpi-label">Quiz Questions</div>
+    </div>
+    <div class="kpi-card reveal reveal-delay-2">
+      <div class="kpi-icon" style="background:rgba(79,172,254,0.12)">🏆</div>
+      <div class="kpi-num">{{ stats.total_courses }}</div>
+      <div class="kpi-label">Courses Available</div>
+    </div>
+    <div class="kpi-card reveal reveal-delay-3" style="background:var(--bg-2)">
+      <div class="kpi-icon" style="background:rgba(52,211,153,0.12)">⭐</div>
+      <div class="kpi-num" style="font-size:1rem; line-height:1.3">{{ stats.most_popular }}</div>
+      <div class="kpi-label">Most Popular Course</div>
+    </div>
+  </div>
+
+  <!-- ══ JAVA GRADE REPORT ══ -->
+  <div class="java-panel reveal">
+    <div class="java-hd">
+      <span class="java-badge"> Java Component</span>
+      <div class="java-title">GradeAnalyzer.java — Student Grade Report</div>
+    </div>
+
+    {% if java_report and java_report.summary %}
+    {% set s = java_report.summary %}
+    <div class="java-stats-row">
+      <div class="java-stat">
+        <div class="java-stat-num">{{ s.total_students }}</div>
+        <div class="java-stat-lbl">Students Analysed</div>
+      </div>
+      <div class="java-stat">
+        <div class="java-stat-num">{{ s.pass_rate | round(1) }}%</div>
+        <div class="java-stat-lbl">Pass Rate</div>
+      </div>
+      <div class="java-stat">
+        <div class="java-stat-num">{{ s.mean_score | round(1) }}</div>
+        <div class="java-stat-lbl">Mean Score</div>
+      </div>
+      <div class="java-stat">
+        <div class="java-stat-num">{{ s.median_score | round(1) }}</div>
+        <div class="java-stat-lbl">Median Score</div>
+      </div>
+      <div class="java-stat">
+        <div class="java-stat-num">{{ s.std_dev | round(2) }}</div>
+        <div class="java-stat-lbl">Std Deviation</div>
+      </div>
+    </div>
+
+    {% if java_report.top_students %}
+    <p class="text-sm text-muted2 mb-2">Top performers computed by <code>GradeAnalyzer.java</code>:</p>
+    <table class="grade-table">
+      <thead>
+        <tr><th>Student</th><th>Course</th><th>Score</th><th>Grade</th></tr>
+      </thead>
+      <tbody>
+        {% for st in java_report.top_students %}
+        <tr>
+          <td>{{ st.full_name }}</td>
+          <td>{{ st.course }}</td>
+          <td>{{ st.score }}%</td>
+          <td><span class="grade-pill grade-{{ st.grade[0] }}">{{ st.grade }}</span></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% endif %}
+
+    {% if java_report.at_risk_students %}
+    <p class="text-sm text-muted2 mb-2 mt-3">⚠️ At-risk students (below 50%):</p>
+    <table class="grade-table">
+      <thead>
+        <tr><th>Student</th><th>Score</th><th>Grade</th><th>Recommendation</th></tr>
+      </thead>
+      <tbody>
+        {% for st in java_report.at_risk_students %}
+        <tr>
+          <td>{{ st.full_name }}</td>
+          <td style="color:var(--rose)">{{ st.score }}%</td>
+          <td><span class="grade-pill grade-F">{{ st.grade }}</span></td>
+          <td class="text-muted2" style="font-size:0.78rem">{{ st.remark }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% endif %}
+
+    {% else %}
+    <div class="alert alert-info">
+      <div>
+        <strong>Java grade report not yet generated.</strong><br>
+        Click below to run the Java GradeAnalyzer and produce a full grade report.
+        The Java program reads student completion data, computes grades using standard
+        boundaries (A+ ≥ 90, A ≥ 80, B ≥ 70, C ≥ 60, D ≥ 50, F &lt; 50),
+        and outputs a JSON report.
+      </div>
+    </div>
+    {% endif %}
+
+    <button class="btn btn-secondary btn-sm run-java-btn" onclick="runJavaAnalyzer(this)">
+       Run Java Grade Analyzer
+    </button>
+  </div>
+
+  <!-- ══ MATPLOTLIB CHARTS ══ -->
+  <div class="flex-between mb-2">
+    <h2 class="section-title"> Data Science Dashboard</h2>
+    <span class="badge badge-green">Generated by pandas + matplotlib</span>
+  </div>
+
+  <div class="charts-grid">
+
+    <div class="chart-card reveal">
+      <div class="chart-title">📈 Course Completion Rates</div>
+      <img src="{{ charts.completion }}" alt="Course completion rates" loading="lazy">
+    </div>
+
+    <div class="chart-card reveal reveal-delay-1">
+      <div class="chart-title"> Score Distribution</div>
+      <img src="{{ charts.distribution }}" alt="Score distribution" loading="lazy">
+    </div>
+
+    <div class="chart-card wide reveal">
+      <div class="chart-title"> Student Enrolment Over Time</div>
+      <img src="{{ charts.enrolment }}" alt="Enrolment over time" loading="lazy">
+    </div>
+
+    <div class="chart-card reveal">
+      <div class="chart-title">🏆 Most Engaged Students</div>
+      <img src="{{ charts.top_students }}" alt="Top students" loading="lazy">
+    </div>
+
+    <div class="chart-card reveal reveal-delay-1">
+      <div class="chart-title">🍩 Lessons Per Course</div>
+      <img src="{{ charts.lessons_pie }}" alt="Lessons per course" loading="lazy">
+    </div>
+
+  </div>
+
+  <div class="mt-3">
+    <a href="/dashboard" class="btn btn-ghost btn-sm"> Back to Dashboard</a>
+    <a href="/analytics/export" class="btn btn-secondary btn-sm" style="margin-left:0.5rem">
+      📥 Export CSV (for Java analyzer)
+    </a>
+  </div>
+
+</div>
+
+<div id="toast"></div>
+<script src="{{ url_for('static', filename='js/main.js') }}"></script>
+<script>
+  async function runJavaAnalyzer(btn) {
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner"></span> Running Java…';
+    try {
+      const r = await fetch('/api/run_java_analyzer', { method: 'POST' });
+      const data = await r.json();
+      if (data.status === 'ok') {
+        Toast.success('Java GradeAnalyzer ran successfully! Reloading...');
+        setTimeout(() => location.reload(), 1200);
+      } else if (data.status === 'no_java') {
+        Toast.info('Java not installed on this server — report uses Python-generated data.');
+        btn.disabled = false;
+        btn.innerHTML = ' Run Java Grade Analyzer';
+      } else {
+        Toast.error(data.message || 'Java run failed.');
+        btn.disabled = false;
+        btn.innerHTML = ' Run Java Grade Analyzer';
+      }
+    } catch (e) {
+      Toast.error('Request failed.');
+      btn.disabled = false;
+      btn.innerHTML = ' Run Java Grade Analyzer';
+    }
+  }
+</script>
+
+<!-- ── Mobile Bottom Nav ── -->
+<nav class="bottom-nav" aria-label="Mobile navigation">
+  <div class="bottom-nav-inner">
+    <a href="/dashboard" class="bottom-nav-item active">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg>
+      Dashboard
+    </a>
+    <a href="/support" class="bottom-nav-item ">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="m3 21 1.9-5.7a8.5 8.5 0 1 1 3.8 3.8z"/></svg>
+      Support
+    </a>
+    <button class="bottom-nav-item" onclick="openDrawer()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M20 21a8 8 0 1 0-16 0"/></svg>
+      Menu
+    </button>
+  </div>
+</nav>
+
+<!-- ── Mobile Drawer ── -->
+<div class="nav-drawer" id="nav-drawer">
+  <div class="nav-drawer-backdrop" onclick="closeDrawer()"></div>
+  <div class="nav-drawer-panel">
+    <button class="nav-drawer-close" onclick="closeDrawer()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+    </button>
+    <div style="font-size:0.7rem;color:var(--text-3);text-transform:uppercase;letter-spacing:0.1em;padding:0 14px;margin-bottom:6px">{{ username }}</div>
+    <a href="/dashboard" class="nav-drawer-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg>
+      Dashboard
+    </a>
+    <a href="/support" class="nav-drawer-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m3 21 1.9-5.7a8.5 8.5 0 1 1 3.8 3.8z"/></svg>
+      Support
+    </a>
+    <hr class="nav-drawer-divider">
+    <button class="nav-drawer-item" onclick="Theme.toggle(); closeDrawer()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+      Toggle Theme
+    </button>
+    <hr class="nav-drawer-divider">
+    <a href="/logout" class="nav-drawer-item danger">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+      Sign Out
+    </a>
+  </div>
+</div>
+
+<script>
+function openDrawer() {
+  var d = document.getElementById('nav-drawer');
+  if (d) { d.classList.add('open'); document.body.style.overflow = 'hidden'; }
+}
+function closeDrawer() {
+  var d = document.getElementById('nav-drawer');
+  if (d) { d.classList.remove('open'); document.body.style.overflow = ''; }
+}
+// Close on Escape key
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape') closeDrawer();
+});
+</script>
+
+</body>
+</html>

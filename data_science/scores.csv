@@ -1,0 +1,6 @@
+username,full_name,course,score,lessons_completed,total_lessons,completed_at
+admin,Administrator,Python Programming,0.0,0,8,
+admin,Administrator,JavaScript,0.0,0,8,
+admin,Administrator,CSS & Web Design,0.0,0,7,
+admin,Administrator,Java Programming,0.0,0,7,
+admin,Administrator,Data Science & Analytics,0.0,0,6,

@@ -1,0 +1,285 @@
+{% from "_icons.html" import icon, course_icon %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>iLEARN — Sign In</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}">
+  <script src="{{ url_for('static', filename='js/theme.js') }}"></script>
+  <style>
+    html, body { height: 100%; }
+    body { display: grid; grid-template-columns: 1.1fr 0.9fr; min-height: 100vh; background: var(--bg); }
+    .auth-brand { background: var(--bg-2); border-right: 1px solid var(--border); display: flex; flex-direction: column; justify-content: center; align-items: flex-start; padding: 3rem 4rem; position: relative; overflow: hidden; }
+    .auth-brand::before { content: ''; position: absolute; inset: 0; background-image: linear-gradient(rgba(79,172,254,0.035) 1px, transparent 1px), linear-gradient(90deg, rgba(79,172,254,0.035) 1px, transparent 1px); background-size: 44px 44px; pointer-events: none; animation: gridmove 25s linear infinite; }
+    @keyframes gridmove { 0% { background-position: 0 0; } 100% { background-position: 44px 44px; } }
+    .orb-1 { position: absolute; top: -120px; left: -120px; width: 420px; height: 420px; background: radial-gradient(circle, rgba(79,172,254,0.1), transparent 65%); border-radius: 50%; pointer-events: none; }
+    .orb-2 { position: absolute; bottom: -100px; right: -60px; width: 320px; height: 320px; background: radial-gradient(circle, rgba(167,139,250,0.08), transparent 65%); border-radius: 50%; pointer-events: none; }
+    .brand-inner { position: relative; z-index: 1; max-width: 460px; }
+    .brand-logo { display: flex; align-items: center; gap: 14px; margin-bottom: 2.5rem; }
+    .logo-icon { width: 52px; height: 52px; background: var(--grad-primary); border-radius: 15px; display: flex; align-items: center; justify-content: center; box-shadow: 0 8px 28px rgba(79,172,254,0.35); color: #fff; }
+    .logo-icon svg { width: 26px; height: 26px; stroke-width: 2; }
+    .logo-text .name { font-family: var(--font-display); font-size: 1.9rem; font-weight: 700; background: var(--grad-primary); -webkit-background-clip: text; -webkit-text-fill-color: transparent; letter-spacing: -1px; line-height: 1; }
+    .logo-text .tagline { font-size: 0.73rem; color: var(--text-3); text-transform: uppercase; letter-spacing: 0.12em; }
+    .brand-headline { font-size: 2.2rem; font-weight: 700; color: var(--white); line-height: 1.2; margin-bottom: 1rem; letter-spacing: -0.5px; }
+    .brand-headline .accent { background: var(--grad-primary); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+    .brand-desc { color: var(--text-2); font-size: 0.96rem; line-height: 1.7; margin-bottom: 2rem; }
+    .feature-pills { display: flex; flex-wrap: wrap; gap: 0.6rem; margin-bottom: 2rem; }
+    .feature-pill { display: inline-flex; align-items: center; gap: 6px; background: var(--surface); border: 1px solid var(--border); border-radius: 99px; padding: 6px 14px; font-size: 0.8rem; color: var(--text-2); }
+    .stat-strip { display: flex; gap: 2rem; padding-top: 1.75rem; border-top: 1px solid var(--border); }
+    .stat-strip .stat-num { font-family: var(--font-display); font-size: 1.7rem; font-weight: 700; background: var(--grad-primary); -webkit-background-clip: text; -webkit-text-fill-color: transparent; line-height: 1; }
+    .stat-strip .stat-lbl { font-size: 0.72rem; color: var(--text-3); margin-top: 3px; }
+    .auth-form-wrap { display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 2rem 2.5rem; overflow-y: auto; }
+    .auth-inner { width: 100%; max-width: 400px; }
+    .auth-tabs { display: flex; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 4px; margin-bottom: 1.75rem; }
+    .tab-btn { flex: 1; text-align: center; padding: 9px 10px; border-radius: 9px; font-family: var(--font-display); font-size: 0.87rem; font-weight: 600; color: var(--text-3); cursor: pointer; transition: all 0.25s; border: none; background: none; }
+    .tab-btn.active { background: var(--grad-primary); color: #fff; box-shadow: 0 4px 14px rgba(79,172,254,0.3); }
+    .auth-panel { display: none; animation: panelIn 0.3s ease; }
+    .auth-panel.active { display: block; }
+    @keyframes panelIn { from { opacity:0; transform: translateY(8px); } to { opacity:1; transform:translateY(0); } }
+    .form-heading { font-size: 1.45rem; font-weight: 700; color: var(--white); margin-bottom: 0.25rem; }
+    .form-subheading { font-size: 0.86rem; color: var(--text-2); margin-bottom: 1.5rem; }
+    .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; }
+    .form-extras { display: flex; align-items: center; justify-content: space-between; margin: 0.25rem 0 1rem; font-size: 0.82rem; }
+    .remember-label { display: flex; align-items: center; gap: 8px; color: var(--text-2); cursor: pointer; user-select: none; }
+    .remember-label input[type="checkbox"] { width: 16px; height: 16px; accent-color: var(--blue); cursor: pointer; flex-shrink: 0; }
+    .forgot-link { color: var(--blue); font-size: 0.82rem; }
+    .forgot-link:hover { color: var(--blue-2); }
+    .divider { display: flex; align-items: center; gap: 12px; margin: 1.25rem 0; color: var(--text-3); font-size: 0.8rem; }
+    .divider::before, .divider::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+    .btn-google { width: 100%; padding: 11px 16px; display: flex; align-items: center; justify-content: center; gap: 10px; background: var(--surface); border: 1px solid var(--border-2); border-radius: var(--radius-lg); color: var(--text); font-family: var(--font-body); font-size: 0.9rem; font-weight: 500; cursor: pointer; transition: all 0.2s; text-decoration: none; }
+    .btn-google:hover { border-color: var(--blue); background: var(--surface-2); color: var(--white); }
+    .google-icon { width: 18px; height: 18px; flex-shrink: 0; }
+    .pw-strength { display: flex; gap: 3px; margin-top: 6px; }
+    .pw-seg { flex:1; height: 3px; border-radius: 99px; background: var(--surface-3); transition: background 0.3s; }
+    .pw-strength-label { font-size: 0.72rem; margin-top: 4px; color: var(--text-3); }
+    .match-note { font-size: 0.73rem; margin-top: 5px; }
+    .terms { font-size: 0.74rem; color: var(--text-3); text-align: center; margin-top: 0.85rem; line-height: 1.5; }
+    .terms a { color: var(--blue); }
+    .alert-login { background: rgba(248,113,113,0.08); border: 1px solid rgba(248,113,113,0.25); border-radius: var(--radius); padding: 10px 14px; margin-bottom: 1rem; font-size: 0.86rem; color: var(--rose); display: flex; align-items: center; gap: 8px; }
+    .alert-success-box { background: rgba(52,211,153,0.08); border: 1px solid rgba(52,211,153,0.25); border-radius: var(--radius); padding: 10px 14px; margin-bottom: 1rem; font-size: 0.86rem; color: var(--green); display: flex; align-items: center; gap: 8px; }
+    .alert-info-box { background: rgba(79,172,254,0.08); border: 1px solid rgba(79,172,254,0.2); border-radius: var(--radius); padding: 10px 14px; margin-bottom: 1rem; font-size: 0.86rem; color: var(--blue); display: flex; align-items: center; gap: 8px; }
+    .mobile-brand { display: none; align-items: center; gap: 10px; margin-bottom: 1.75rem; }
+    .mobile-brand .m-logo { width: 40px; height: 40px; border-radius: 10px; background: var(--grad-primary); display: flex; align-items: center; justify-content: center; color: #fff; }
+    .mobile-brand .m-logo svg { width: 20px; height: 20px; }
+    .mobile-brand .m-name { font-family: var(--font-display); font-size: 1.4rem; font-weight: 700; background: var(--grad-primary); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+    @media (max-width: 920px) {
+      body { grid-template-columns: 1fr; }
+      .auth-brand { display: none; }
+      .auth-form-wrap { padding: 2.5rem 1.5rem; min-height: 100vh; }
+      .mobile-brand { display: flex; }
+    }
+    @media (max-width: 440px) {
+      .two-col { grid-template-columns: 1fr; }
+      .auth-form-wrap { padding: 1.75rem 1rem; }
+      .form-extras { flex-direction: column; align-items: flex-start; gap: 8px; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="auth-brand">
+  <div class="orb-1"></div><div class="orb-2"></div>
+  <div class="brand-inner">
+    <div class="brand-logo">
+      <div class="logo-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/></svg></div>
+      <div class="logo-text"><div class="name">iLEARN</div><div class="tagline">E-Learning Platform</div></div>
+    </div>
+    <h1 class="brand-headline">Learn. Grow.<br><span class="accent">Achieve More.</span></h1>
+    <p class="brand-desc">A professional e-learning platform designed for working adults, university students, and anyone serious about mastering technology — at their own pace, on any device.</p>
+    <div class="feature-pills">
+      <span class="feature-pill">{{ icon("chart-bar","icon-sm") }} Data Analysis</span>
+      <span class="feature-pill">{{ icon("code-2","icon-sm") }} Web Development</span>
+      <span class="feature-pill">{{ icon("cpu","icon-sm") }} AI Fundamentals</span>
+      <span class="feature-pill">{{ icon("monitor","icon-sm") }} Digital Skills</span>
+      <span class="feature-pill">{{ icon("briefcase","icon-sm") }} Career Paths</span>
+      <span class="feature-pill">{{ icon("target","icon-sm") }} Progress Tracking</span>
+    </div>
+    <div class="stat-strip">
+      <div><div class="stat-num">5</div><div class="stat-lbl">Courses</div></div>
+      <div><div class="stat-num">20+</div><div class="stat-lbl">Lessons</div></div>
+      <div><div class="stat-num">50+</div><div class="stat-lbl">Quizzes</div></div>
+    </div>
+  </div>
+</div>
+
+<div class="auth-form-wrap">
+  <div class="auth-inner">
+
+    <div class="mobile-brand">
+      <div class="m-logo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/></svg></div>
+      <div class="m-name">iLEARN</div>
+    </div>
+
+    <div class="auth-tabs">
+      <button class="tab-btn {% if not show_register %}active{% endif %}" onclick="switchTab('login',this)">Sign In</button>
+      <button class="tab-btn {% if show_register %}active{% endif %}"    onclick="switchTab('register',this)">Create Account</button>
+    </div>
+
+    {% if request.args.get('google_pending') %}
+    <div class="alert-info-box">{{ icon("cpu","icon-sm") }} Google login coming soon. Sign in with username for now.</div>
+    {% endif %}
+
+    <!-- SIGN IN PANEL -->
+    <div class="auth-panel {% if not show_register %}active{% endif %}" id="panel-login">
+      <div class="form-heading">Welcome back</div>
+      <p class="form-subheading">Sign in to continue your learning journey.</p>
+      {% if error and not show_register %}<div class="alert-login">{{ icon("x","icon-sm") }} {{ error }}</div>{% endif %}
+      {% if success %}<div class="alert-success-box">{{ icon("check-circle","icon-sm") }} {{ success }}</div>{% endif %}
+
+      <a href="/auth/google" class="btn-google">
+        <svg class="google-icon" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
+        Continue with Google
+      </a>
+      <div class="divider">or sign in with username</div>
+
+      <form method="POST" action="/login" id="login-form">
+      <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+        <div class="form-group">
+          <label class="form-label">Username</label>
+          <div class="input-wrap">
+            <input class="form-input has-icon" type="text" name="username" placeholder="Enter your username" required autocomplete="username" autofocus>
+            <span class="input-icon">{{ icon("user","icon-sm") }}</span>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Password</label>
+          <div class="input-wrap">
+            <input class="form-input has-icon" type="password" id="lpw" name="password" placeholder="Enter your password" required autocomplete="current-password">
+            <span class="input-icon">{{ icon("lock","icon-sm") }}</span>
+            <button type="button" class="input-suffix" onclick="togglePw('lpw',this)">Show</button>
+          </div>
+        </div>
+        <div class="form-extras">
+          <label class="remember-label">
+            <input type="checkbox" name="remember_me" id="remember_me"> Remember me for 30 days
+          </label>
+          <a href="#" class="forgot-link">Forgot password?</a>
+        </div>
+        <button type="submit" class="btn btn-primary btn-full btn-lg" id="login-btn">Sign In</button>
+      </form>
+    </div>
+
+    <!-- CREATE ACCOUNT PANEL -->
+    <div class="auth-panel {% if show_register %}active{% endif %}" id="panel-register">
+      <div class="form-heading">Create your account</div>
+      <p class="form-subheading">Join iLEARN free and start learning today.</p>
+      {% if error and show_register %}<div class="alert-login">{{ icon("x","icon-sm") }} {{ error }}</div>{% endif %}
+
+      <a href="/auth/google" class="btn-google">
+        <svg class="google-icon" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
+        Sign up with Google
+      </a>
+      <div class="divider">or create with username</div>
+
+      <form method="POST" action="/register" id="reg-form">
+      <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+        <div class="two-col">
+          <div class="form-group">
+            <label class="form-label">Full Name <span style="color:var(--rose)">*</span></label>
+            <div class="input-wrap">
+              <input class="form-input has-icon" type="text" name="full_name" placeholder="Your full name" required>
+              <span class="input-icon">{{ icon("user","icon-sm") }}</span>
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Username <span style="color:var(--rose)">*</span></label>
+            <div class="input-wrap">
+              <input class="form-input has-icon" type="text" name="username" placeholder="Pick a username" required minlength="3" pattern="[a-zA-Z0-9_]+" oninput="checkUser(this)">
+              <span class="input-icon">{{ icon("user","icon-sm") }}</span>
+            </div>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Email <span style="color:var(--text-3)">(optional)</span></label>
+          <div class="input-wrap">
+            <input class="form-input has-icon" type="email" name="email" placeholder="your@email.com">
+            <span class="input-icon">{{ icon("send","icon-sm") }}</span>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Password <span style="color:var(--rose)">*</span></label>
+          <div class="input-wrap">
+            <input class="form-input has-icon" type="password" id="rpw" name="password" placeholder="Minimum 6 characters" required minlength="6" oninput="checkStrength(this.value)">
+            <span class="input-icon">{{ icon("lock","icon-sm") }}</span>
+            <button type="button" class="input-suffix" onclick="togglePw('rpw',this)">Show</button>
+          </div>
+          <div class="pw-strength"><div class="pw-seg" id="ps1"></div><div class="pw-seg" id="ps2"></div><div class="pw-seg" id="ps3"></div><div class="pw-seg" id="ps4"></div></div>
+          <div class="pw-strength-label" id="pwlabel">Enter a password</div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Confirm Password <span style="color:var(--rose)">*</span></label>
+          <div class="input-wrap">
+            <input class="form-input has-icon" type="password" id="rpw2" name="confirm" placeholder="Re-enter password" required oninput="checkMatch()">
+            <span class="input-icon">{{ icon("eye-off","icon-sm") }}</span>
+          </div>
+          <div id="match-note" class="match-note"></div>
+        </div>
+        <button type="submit" class="btn btn-purple btn-full btn-lg mt-1" id="reg-btn">Create Free Account</button>
+      </form>
+      <p class="terms">By registering you agree to our <a href="#">Terms of Service</a> and <a href="#">Privacy Policy</a>.</p>
+    </div>
+
+  </div>
+</div>
+
+<div id="toast"></div>
+<script src="{{ url_for('static', filename='js/main.js') }}"></script>
+<script>
+  function switchTab(tab, btn) {
+    document.querySelectorAll('.tab-btn').forEach(function(t){t.classList.remove('active');});
+    document.querySelectorAll('.auth-panel').forEach(function(p){p.classList.remove('active');});
+    btn.classList.add('active');
+    document.getElementById('panel-'+tab).classList.add('active');
+  }
+  function togglePw(id, btn) {
+    var el = document.getElementById(id);
+    el.type = el.type==='password' ? 'text' : 'password';
+    btn.textContent = el.type==='password' ? 'Show' : 'Hide';
+  }
+  function checkStrength(v) {
+    var segs=['ps1','ps2','ps3','ps4'].map(function(id){return document.getElementById(id);});
+    var lbl=document.getElementById('pwlabel');
+    var score=0;
+    if(v.length>=6)score++; if(v.length>=10)score++;
+    if(/[A-Z]/.test(v)&&/[0-9]/.test(v))score++; if(/[^A-Za-z0-9]/.test(v))score++;
+    var colors=['#f87171','#fbbf24','#60a5fa','#34d399'];
+    var labels=['Weak','Fair','Good','Strong'];
+    segs.forEach(function(s,i){s.style.background=i<score?colors[score-1]:'';});
+    lbl.textContent=v.length?labels[Math.max(0,score-1)]:'Enter a password';
+    lbl.style.color=v.length?colors[Math.max(0,score-1)]:'';
+  }
+  function checkMatch() {
+    var pw=document.getElementById('rpw').value, pw2=document.getElementById('rpw2').value;
+    var el=document.getElementById('match-note');
+    if(!pw2){el.textContent='';return;}
+    el.textContent=pw===pw2?'Passwords match':'Passwords do not match';
+    el.style.color=pw===pw2?'var(--green)':'var(--rose)';
+  }
+  function checkUser(el){
+    var ok=/^[a-zA-Z0-9_]{3,}$/.test(el.value);
+    el.style.borderColor=el.value.length?(ok?'var(--green)':'var(--rose)'):'';
+  }
+  window.addEventListener('pageshow',function(){
+    var lb=document.getElementById('login-btn'), rb=document.getElementById('reg-btn');
+    if(lb){lb.disabled=false;lb.textContent='Sign In';}
+    if(rb){rb.disabled=false;rb.textContent='Create Free Account';}
+  });
+  document.getElementById('login-form').addEventListener('submit',function(){
+    var btn=document.getElementById('login-btn');
+    btn.disabled=true; btn.innerHTML='<span class="spinner"></span> Signing in\u2026';
+    setTimeout(function(){btn.disabled=false;btn.textContent='Sign In';},8000);
+  });
+  document.getElementById('reg-form').addEventListener('submit',function(e){
+    if(document.getElementById('rpw').value!==document.getElementById('rpw2').value){
+      e.preventDefault();
+      var n=document.getElementById('match-note');
+      n.textContent='Passwords do not match'; n.style.color='var(--rose)'; return;
+    }
+    var btn=document.getElementById('reg-btn');
+    btn.disabled=true; btn.innerHTML='<span class="spinner"></span> Creating account\u2026';
+    setTimeout(function(){btn.disabled=false;btn.textContent='Create Free Account';},8000);
+  });
+</script>
+</body>
+</html>

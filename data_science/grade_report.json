@@ -1,0 +1,154 @@
+{
+  "summary": {
+    "total_students": 5,
+    "pass_count": 0,
+    "fail_count": 5,
+    "pass_rate": 0.0,
+    "mean_score": 0.0,
+    "median_score": 0.0,
+    "std_dev": 0.0,
+    "min_score": 0.0,
+    "max_score": 0.0
+  },
+  "grade_distribution": {
+    "A+": 0,
+    "A": 0,
+    "B": 0,
+    "C": 0,
+    "D": 0,
+    "F": 5
+  },
+  "course_averages": {},
+  "top_students": [
+    {
+      "username": "admin",
+      "full_name": "Administrator",
+      "course": "Python Programming",
+      "score": 0.0,
+      "grade": "F"
+    },
+    {
+      "username": "admin",
+      "full_name": "Administrator",
+      "course": "JavaScript",
+      "score": 0.0,
+      "grade": "F"
+    },
+    {
+      "username": "admin",
+      "full_name": "Administrator",
+      "course": "CSS & Web Design",
+      "score": 0.0,
+      "grade": "F"
+    },
+    {
+      "username": "admin",
+      "full_name": "Administrator",
+      "course": "Java Programming",
+      "score": 0.0,
+      "grade": "F"
+    },
+    {
+      "username": "admin",
+      "full_name": "Administrator",
+      "course": "Data Science & Analytics",
+      "score": 0.0,
+      "grade": "F"
+    }
+  ],
+  "at_risk_students": [
+    {
+      "username": "admin",
+      "full_name": "Administrator",
+      "score": 0.0,
+      "grade": "F",
+      "remark": "Further study required"
+    },
+    {
+      "username": "admin",
+      "full_name": "Administrator",
+      "score": 0.0,
+      "grade": "F",
+      "remark": "Further study required"
+    },
+    {
+      "username": "admin",
+      "full_name": "Administrator",
+      "score": 0.0,
+      "grade": "F",
+      "remark": "Further study required"
+    },
+    {
+      "username": "admin",
+      "full_name": "Administrator",
+      "score": 0.0,
+      "grade": "F",
+      "remark": "Further study required"
+    },
+    {
+      "username": "admin",
+      "full_name": "Administrator",
+      "score": 0.0,
+      "grade": "F",
+      "remark": "Further study required"
+    }
+  ],
+  "all_records": [
+    {
+      "username": "admin",
+      "full_name": "Administrator",
+      "course": "Python Programming",
+      "score": 0.0,
+      "grade": "F",
+      "passed": false,
+      "gpa": 0.0,
+      "lessons_completed": 0,
+      "total_lessons": 8
+    },
+    {
+      "username": "admin",
+      "full_name": "Administrator",
+      "course": "JavaScript",
+      "score": 0.0,
+      "grade": "F",
+      "passed": false,
+      "gpa": 0.0,
+      "lessons_completed": 0,
+      "total_lessons": 8
+    },
+    {
+      "username": "admin",
+      "full_name": "Administrator",
+      "course": "CSS & Web Design",
+      "score": 0.0,
+      "grade": "F",
+      "passed": false,
+      "gpa": 0.0,
+      "lessons_completed": 0,
+      "total_lessons": 7
+    },
+    {
+      "username": "admin",
+      "full_name": "Administrator",
+      "course": "Java Programming",
+      "score": 0.0,
+      "grade": "F",
+      "passed": false,
+      "gpa": 0.0,
+      "lessons_completed": 0,
+      "total_lessons": 7
+    },
+    {
+      "username": "admin",
+      "full_name": "Administrator",
+      "course": "Data Science & Analytics",
+      "score": 0.0,
+      "grade": "F",
+      "passed": false,
+      "gpa": 0.0,
+      "lessons_completed": 0,
+      "total_lessons": 6
+    }
+  ],
+  "generated_by": "Python fallback (GradeAnalyzer.java equivalent)"
+}

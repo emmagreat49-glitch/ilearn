@@ -1,0 +1,239 @@
+{% from "_icons.html" import icon, course_icon %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>iLEARN — Quiz: {{ lesson.lesson_title }}</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}">
+  <script src="{{ url_for('static', filename='js/theme.js') }}"></script>
+  <style>
+    .quiz-wrap { max-width: 760px; margin: 0 auto; padding: 2rem 1.5rem; }
+
+    .quiz-hero {
+      background: var(--bg-2); border: 1px solid var(--border);
+      border-radius: var(--radius-xl); padding: 2rem;
+      text-align: center; margin-bottom: 1.75rem;
+      position: relative; overflow: hidden;
+    }
+    .quiz-hero::before {
+      content: ''; position: absolute; inset: 0;
+      background: linear-gradient(135deg, rgba(79,172,254,0.04), rgba(167,139,250,0.04));
+    }
+    .quiz-hero-inner { position: relative; z-index: 1; }
+    .quiz-hero-icon { font-size: 3rem; display: block; margin-bottom: 0.75rem; }
+    .quiz-hero h1 { font-size: 1.5rem; color: var(--white); margin-bottom: 0.4rem; }
+    .quiz-hero p  { color: var(--text-2); font-size: 0.88rem; }
+
+    /* Live score */
+    .score-bar {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius-lg); padding: 1rem 1.5rem;
+      margin-bottom: 1.4rem;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .score-big {
+      font-family: var(--font-display); font-size: 2rem; font-weight: 700;
+      background: var(--grad-primary);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+      line-height: 1;
+    }
+    .score-sub { font-size: 0.75rem; color: var(--text-3); margin-top: 3px; }
+
+    /* Progress bar strip */
+    .prog-strip { margin-bottom: 1.4rem; }
+
+    /* Question card */
+    .q-card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius-xl); padding: 1.5rem;
+      margin-bottom: 1.1rem;
+      animation: qIn 0.3s ease;
+    }
+    @keyframes qIn { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } }
+    .q-num {
+      font-size: 0.72rem; color: var(--blue); text-transform: uppercase;
+      letter-spacing: 0.1em; font-weight: 700; margin-bottom: 0.5rem;
+      font-family: var(--font-display);
+    }
+    .q-text {
+      font-size: 0.97rem; font-weight: 600; color: var(--white);
+      line-height: 1.5; margin-bottom: 1.1rem;
+    }
+
+    /* Results */
+    .results-card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius-xl); padding: 2.5rem;
+      text-align: center; margin-top: 1.4rem; display: none;
+    }
+    .results-emoji { font-size: 4rem; display: block; margin-bottom: 0.75rem; }
+    .results-pct {
+      font-size: 4.5rem; font-weight: 700; line-height: 1; margin-bottom: 0.5rem;
+      font-family: var(--font-display);
+      background: var(--grad-primary);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+    }
+    .results-title { font-size: 1.4rem; font-weight: 700; color: var(--white); margin-bottom: 0.4rem; }
+    .results-sub   { color: var(--text-2); font-size: 0.9rem; margin-bottom: 1.5rem; }
+    .results-actions { display: flex; gap: 0.75rem; justify-content: center; flex-wrap: wrap; }
+  </style>
+</head>
+<body>
+
+<nav class="navbar">
+  <div class="nav-brand">iLEARN<sup>BETA</sup></div>
+  <div class="nav-links">
+    <a href="/dashboard">Dashboard</a>
+    <a href="/support">Support</a>
+    <a href="/analytics">Analytics</a>
+    <a href="/contact">Contact</a>
+  </div>
+  <div class="nav-right">
+    <button class="theme-toggle" onclick="Theme.toggle()">☀️ Light mode</button>
+    <a href="/logout" class="btn-nav-logout">Sign Out</a>
+  </div>
+</nav>
+
+<div class="quiz-wrap">
+
+  <div class="quiz-hero">
+    <div class="quiz-hero-inner">
+      <span class="quiz-hero-icon"></span>
+      <h1>Quiz: {{ lesson.lesson_title }}</h1>
+      <p>Test your understanding. Each question gives instant feedback.</p>
+    </div>
+  </div>
+
+  <div class="score-bar">
+    <div>
+      <div class="score-big" id="live-score">0</div>
+      <div class="score-sub">Score</div>
+    </div>
+    <div style="text-align:right">
+      <div class="score-big">{{ quizzes | length }}</div>
+      <div class="score-sub">Questions</div>
+    </div>
+  </div>
+
+  <div class="prog-strip">
+    <div class="flex-between mb-1">
+      <span class="text-sm text-muted2">Progress</span>
+      <span class="text-sm text-muted2" id="answered-count">0 / {{ quizzes | length }}</span>
+    </div>
+    <div class="progress-track">
+      <div class="progress-fill" id="qprog" style="width:0%"></div>
+    </div>
+  </div>
+
+  {% for q in quizzes %}
+  <div class="q-card">
+    <div class="q-num">Question {{ loop.index }} of {{ quizzes | length }}</div>
+    <div class="q-text">{{ q.question }}</div>
+    <div>
+      <button class="quiz-option" data-value="A"
+        onclick="quizCheck(this, 'A', '{{ q.correct_answer }}', {{ loop.index0 }}, {{ q.id }})">
+        <span class="opt-label">A</span> {{ q.option_a }}
+      </button>
+      <button class="quiz-option" data-value="B"
+        onclick="quizCheck(this, 'B', '{{ q.correct_answer }}', {{ loop.index0 }}, {{ q.id }})">
+        <span class="opt-label">B</span> {{ q.option_b }}
+      </button>
+      <button class="quiz-option" data-value="C"
+        onclick="quizCheck(this, 'C', '{{ q.correct_answer }}', {{ loop.index0 }}, {{ q.id }})">
+        <span class="opt-label">C</span> {{ q.option_c }}
+      </button>
+    </div>
+    {% if q.explanation %}
+    <div class="q-explanation" id="expl-{{ q.id }}" style="display:none; margin-top:0.75rem; padding:10px 14px; background:rgba(79,172,254,0.06); border-radius:var(--radius); font-size:0.83rem; color:var(--text-2); border-left:3px solid var(--blue);">
+       {{ q.explanation }}
+    </div>
+    {% endif %}
+  </div>
+  {% endfor %}
+
+  <div class="results-card" id="results-card">
+    <span class="results-emoji" id="res-emoji"></span>
+    <div class="results-pct" id="res-pct">0%</div>
+    <div class="results-title" id="res-title">Quiz Complete!</div>
+    <div class="results-sub" id="res-sub">You scored <span id="res-score"></span> out of {{ quizzes | length }}.</div>
+    <div class="results-actions">
+      <a href="/lesson/{{ lesson.id }}" class="btn btn-secondary"> Back to Lesson</a>
+      <button class="btn btn-primary" onclick="location.reload()"> Retry Quiz</button>
+    </div>
+  </div>
+
+  <div class="mt-2">
+    <a href="/lesson/{{ lesson.id }}" class="btn btn-ghost btn-sm"> Back to Lesson</a>
+  </div>
+
+</div>
+
+<div id="toast"></div>
+<script src="{{ url_for('static', filename='js/main.js') }}"></script>
+<script>
+  const TOTAL = {{ quizzes | length }};
+  const answered = new Set();
+  let score = 0;
+
+  // Build a map of button index to question id
+  const qIds = [{% for q in quizzes %}{{ q.id }}{% if not loop.last %},{% endif %}{% endfor %}];
+
+  function quizCheck(btn, selected, correct, btnGroupIndex, qid) {
+    // Find the question index based on the parent card
+    const card = btn.closest('.q-card');
+    const allCards = document.querySelectorAll('.q-card');
+    let qIndex = -1;
+    allCards.forEach((c, i) => { if (c === card) qIndex = i; });
+
+    if (answered.has(qIndex)) return;
+    answered.add(qIndex);
+
+    const opts = card.querySelectorAll('.quiz-option');
+    opts.forEach(o => {
+      o.disabled = true;
+      if (o.dataset.value === correct) o.classList.add('correct');
+    });
+
+    if (selected === correct) {
+      score++;
+      btn.classList.add('correct');
+      Toast.success('✓ Correct!');
+    } else {
+      btn.classList.add('wrong');
+      Toast.error('✗ Incorrect!');
+    }
+
+    // Show explanation if present
+    const expl = card.querySelector('.q-explanation');
+    if (expl) expl.style.display = 'block';
+
+    document.getElementById('live-score').textContent = score;
+    const pct = Math.round(answered.size / TOTAL * 100);
+    document.getElementById('qprog').style.width = pct + '%';
+    document.getElementById('answered-count').textContent = `${answered.size} / ${TOTAL}`;
+
+    if (answered.size === TOTAL) setTimeout(showResults, 700);
+  }
+
+  function showResults() {
+    const card = document.getElementById('results-card');
+    card.style.display = 'block';
+    card.scrollIntoView({ behavior: 'smooth' });
+
+    const pct = Math.round(score / TOTAL * 100);
+    document.getElementById('res-pct').textContent = pct + '%';
+    document.getElementById('res-score').textContent = `${score} out of ${TOTAL}`;
+
+    let emoji = '😕', title = 'Keep Practising!';
+    if (pct === 100)     { emoji = '🏆'; title = 'Perfect Score!'; }
+    else if (pct >= 80)  { emoji = ''; title = 'Excellent Work!'; }
+    else if (pct >= 60)  { emoji = '👍'; title = 'Good Job!'; }
+    else if (pct >= 40)  { emoji = ''; title = 'Keep Studying!'; }
+
+    document.getElementById('res-emoji').textContent = emoji;
+    document.getElementById('res-title').textContent = title;
+  }
+</script>
+</body>
+</html>

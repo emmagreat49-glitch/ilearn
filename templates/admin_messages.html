@@ -1,0 +1,342 @@
+{% from "_icons.html" import icon %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="csrf-token" content="{{ csrf_token() }}">
+  <title>iLEARN — Admin: Messages</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}">
+  <script src="{{ url_for('static', filename='js/theme.js') }}"></script>
+  <style>
+    .admin-wrap { max-width: 860px; margin: 0 auto; }
+
+    .admin-hero {
+      background: var(--bg-2); border: 1px solid var(--border);
+      border-radius: var(--radius-xl); padding: 1.6rem 2rem; margin-bottom: 1.5rem;
+      display: flex; align-items: center; justify-content: space-between;
+      flex-wrap: wrap; gap: 1rem; position: relative; overflow: hidden;
+    }
+    .admin-hero::before {
+      content: ''; position: absolute; inset: 0;
+      background: linear-gradient(135deg, rgba(248,113,113,0.05), rgba(167,139,250,0.04));
+      pointer-events: none;
+    }
+    .admin-hero-inner { position: relative; z-index: 1; }
+    .admin-hero h1 { font-size: 1.4rem; margin-bottom: 0.2rem; }
+    .admin-hero p  { font-size: 0.83rem; color: var(--text-3); }
+
+    /* Filters bar */
+    .filters-bar {
+      display: flex; align-items: center; gap: 0.5rem;
+      margin-bottom: 1rem; flex-wrap: wrap;
+    }
+    .filter-btn {
+      padding: 6px 14px; border-radius: 99px;
+      font-size: 0.78rem; font-weight: 600; font-family: var(--font-display);
+      border: 1px solid var(--border); background: var(--surface);
+      color: var(--text-3); cursor: pointer; transition: all 0.2s;
+    }
+    .filter-btn.active, .filter-btn:hover {
+      background: var(--grad-primary); color: var(--bg);
+      border-color: transparent;
+    }
+    .filter-count { font-size: 0.68rem; opacity: 0.75; }
+
+    /* Message cards */
+    .msg-card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius-xl); margin-bottom: 0.85rem;
+      transition: border-color 0.2s, box-shadow 0.2s;
+      overflow: hidden;
+    }
+    .msg-card:hover { border-color: var(--border-2); }
+    .msg-card.unread { border-left: 3px solid var(--blue); }
+
+    .msg-card-hd {
+      display: flex; align-items: center; gap: 10px;
+      padding: 0.9rem 1.4rem; border-bottom: 1px solid rgba(99,179,237,0.07);
+      flex-wrap: wrap; gap: 0.5rem;
+    }
+    .msg-unread-dot {
+      width: 8px; height: 8px; border-radius: 50%;
+      background: var(--blue); box-shadow: 0 0 6px var(--blue);
+      flex-shrink: 0;
+    }
+    .msg-unread-dot.read { background: var(--surface-3); box-shadow: none; }
+    .msg-from { font-weight: 700; color: var(--white); font-size: 0.9rem; }
+    .msg-email { font-size: 0.76rem; color: var(--text-3); }
+    .msg-at-user { font-size: 0.72rem; color: var(--blue); background: rgba(79,172,254,0.1); padding: 2px 8px; border-radius: 99px; }
+    .msg-date { font-size: 0.72rem; color: var(--text-3); font-family: var(--font-code); margin-left: auto; white-space: nowrap; }
+
+    .msg-card-body { padding: 0.85rem 1.4rem; }
+    .msg-subject { font-family: var(--font-display); font-size: 0.88rem; font-weight: 700; color: var(--blue); margin-bottom: 0.5rem; }
+    .msg-text {
+      font-size: 0.87rem; color: var(--text); line-height: 1.7;
+      white-space: pre-wrap; word-break: break-word;
+      background: var(--bg-2); border-radius: var(--radius);
+      padding: 0.8rem 1rem; border: 1px solid var(--border);
+    }
+
+    .msg-card-ft {
+      display: flex; align-items: center; gap: 0.5rem;
+      padding: 0.6rem 1.4rem; border-top: 1px solid rgba(99,179,237,0.07);
+      background: var(--bg-2);
+    }
+    .msg-action-btn {
+      display: inline-flex; align-items: center; gap: 5px;
+      padding: 5px 12px; border-radius: 8px; border: 1px solid var(--border);
+      background: var(--surface); color: var(--text-3); font-size: 0.76rem;
+      font-family: var(--font-display); font-weight: 600;
+      cursor: pointer; transition: all 0.18s;
+    }
+    .msg-action-btn svg { width: 13px; height: 13px; }
+    .msg-action-btn:hover { border-color: var(--blue); color: var(--blue); }
+    .msg-action-btn.del:hover { border-color: var(--rose); color: var(--rose); }
+    .msg-action-btn.del:hover { background: rgba(248,113,113,0.06); }
+
+    .no-msgs { text-align: center; padding: 3.5rem; color: var(--text-3); }
+    .no-msgs svg { width: 36px; height: 36px; margin-bottom: 0.75rem; opacity: 0.4; }
+
+    @media (max-width: 480px) {
+      .admin-hero { padding: 1.2rem; }
+      .msg-card-hd, .msg-card-body, .msg-card-ft { padding-left: 1rem; padding-right: 1rem; }
+      .msg-date { display: none; }
+    }
+  </style>
+</head>
+<body>
+
+<nav class="navbar">
+  <div class="nav-brand">iLEARN<sup>BETA</sup></div>
+  <div class="nav-links">
+    <a href="/dashboard">Dashboard</a>
+    <a href="/admin" style="color:var(--rose)">Admin</a>
+    <a href="/admin/messages" style="color:var(--blue)">Messages</a>
+    <a href="/analytics">Analytics</a>
+  </div>
+  <div class="nav-right">
+    <div class="nav-avatar">{{ (full_name or username)[0].upper() }}</div>
+    <button class="theme-toggle" id="theme-btn" onclick="Theme.toggle()">Light</button>
+    <a href="/logout" class="btn-nav-logout">Sign Out</a>
+  </div>
+  <button class="nav-hamburger" onclick="openDrawer()" aria-label="Open menu">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+  </button>
+</nav>
+
+<div class="page-wrap">
+<div class="admin-wrap">
+
+  <!-- Hero -->
+  <div class="admin-hero">
+    <div class="admin-hero-inner">
+      <div style="font-size:0.72rem;color:var(--rose);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:4px">
+        Admin Panel
+      </div>
+      <h1>{{ icon("message-circle","icon-lg") }} Contact Messages</h1>
+      <p>All support messages submitted by users.</p>
+    </div>
+    <div style="display:flex;gap:0.5rem;flex-wrap:wrap;">
+      {% set unread_count = messages | rejectattr('is_read') | list | length %}
+      {% if unread_count > 0 %}
+      <span class="badge badge-blue">{{ unread_count }} unread</span>
+      {% endif %}
+      <span class="badge badge-amber">{{ messages|length }} total</span>
+      <a href="/admin" class="btn btn-ghost btn-sm" style="margin-left:0.25rem;">
+        {{ icon("arrow-left","icon-sm") }} Back to Admin
+      </a>
+    </div>
+  </div>
+
+  <!-- Filter bar -->
+  {% if messages %}
+  <div class="filters-bar">
+    <button class="filter-btn active" id="filter-all" onclick="filterMessages('all', this)">
+      All <span class="filter-count">({{ messages|length }})</span>
+    </button>
+    <button class="filter-btn" id="filter-unread" onclick="filterMessages('unread', this)">
+      Unread <span class="filter-count">({{ messages | rejectattr('is_read') | list | length }})</span>
+    </button>
+    <button class="filter-btn" id="filter-read" onclick="filterMessages('read', this)">
+      Read
+    </button>
+  </div>
+  {% endif %}
+
+  <!-- Message cards -->
+  {% if messages %}
+    {% for m in messages %}
+    <div class="msg-card {% if not m.is_read %}unread{% endif %}"
+         id="msg-{{ m.id }}"
+         data-read="{{ '1' if m.is_read else '0' }}">
+
+      <div class="msg-card-hd">
+        <div class="msg-unread-dot {% if m.is_read %}read{% endif %}" id="dot-{{ m.id }}"></div>
+        <span class="msg-from">{{ m.name }}</span>
+        <span class="msg-email">{{ m.email }}</span>
+        {% if m.username %}
+        <span class="msg-at-user">@{{ m.username }}</span>
+        {% endif %}
+        <span class="msg-date">{{ m.submitted_at[:16].replace('T',' ') if m.submitted_at else '' }}</span>
+      </div>
+
+      <div class="msg-card-body">
+        <div class="msg-subject">{{ m.subject }}</div>
+        <div class="msg-text">{{ m.message }}</div>
+      </div>
+
+      <div class="msg-card-ft">
+        <button class="msg-action-btn" id="read-btn-{{ m.id }}"
+          onclick="toggleRead({{ m.id }}, this)">
+          {{ icon("eye","icon-sm") }}
+          <span>{% if m.is_read %}Mark Unread{% else %}Mark Read{% endif %}</span>
+        </button>
+        <button class="msg-action-btn del"
+          onclick="deleteMessage({{ m.id }})">
+          {{ icon("trash-2","icon-sm") }} Delete
+        </button>
+      </div>
+    </div>
+    {% endfor %}
+  {% else %}
+    <div class="no-msgs">
+      {{ icon("message-circle","icon-xl") }}
+      <div style="font-size:1rem;font-weight:600;margin-bottom:4px;">No messages yet</div>
+      <div style="font-size:0.84rem;">Support messages submitted by users will appear here.</div>
+    </div>
+  {% endif %}
+
+</div>
+</div>
+
+<div id="toast"></div>
+<script src="{{ url_for('static', filename='js/main.js') }}"></script>
+<script>
+var CSRF = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+
+function getCsrfToken() { return CSRF; }
+
+function filterMessages(type, btn) {
+  document.querySelectorAll('.filter-btn').forEach(function(b){ b.classList.remove('active'); });
+  btn.classList.add('active');
+  document.querySelectorAll('.msg-card').forEach(function(card){
+    var isRead = card.dataset.read === '1';
+    if (type === 'all') {
+      card.style.display = '';
+    } else if (type === 'unread') {
+      card.style.display = isRead ? 'none' : '';
+    } else {
+      card.style.display = isRead ? '' : 'none';
+    }
+  });
+}
+
+function toggleRead(id, btn) {
+  fetch('/api/admin/toggle_read/' + id, {
+    method: 'POST',
+    headers: { 'X-CSRF-Token': getCsrfToken(), 'Content-Type': 'application/json' }
+  })
+  .then(function(r){ return r.json(); })
+  .then(function(data){
+    if (data.status !== 'ok') return;
+    var card = document.getElementById('msg-' + id);
+    var dot  = document.getElementById('dot-' + id);
+    var span = btn.querySelector('span');
+    if (data.is_read) {
+      card.classList.remove('unread');
+      card.dataset.read = '1';
+      dot.classList.add('read');
+      span.textContent = 'Mark Unread';
+    } else {
+      card.classList.add('unread');
+      card.dataset.read = '0';
+      dot.classList.remove('read');
+      span.textContent = 'Mark Read';
+    }
+    showToast(data.is_read ? 'Marked as read' : 'Marked as unread', 'success');
+  })
+  .catch(function(){ showToast('Something went wrong', 'error'); });
+}
+
+function deleteMessage(id) {
+  if (!confirm('Delete this message? This cannot be undone.')) return;
+  fetch('/api/admin/delete_message/' + id, {
+    method: 'DELETE',
+    headers: { 'X-CSRF-Token': getCsrfToken() }
+  })
+  .then(function(r){ return r.json(); })
+  .then(function(data){
+    if (data.status !== 'ok') { showToast('Could not delete', 'error'); return; }
+    var card = document.getElementById('msg-' + id);
+    card.style.transition = 'all 0.3s ease';
+    card.style.opacity = '0';
+    card.style.transform = 'translateX(-10px)';
+    setTimeout(function(){ card.remove(); }, 300);
+    showToast('Message deleted', 'success');
+  })
+  .catch(function(){ showToast('Something went wrong', 'error'); });
+}
+</script>
+
+<!-- ── Mobile Bottom Nav ── -->
+<nav class="bottom-nav" aria-label="Mobile navigation">
+  <div class="bottom-nav-inner">
+    <a href="/dashboard" class="bottom-nav-item active">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg>
+      Dashboard
+    </a>
+    <a href="/support" class="bottom-nav-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="m3 21 1.9-5.7a8.5 8.5 0 1 1 3.8 3.8z"/></svg>
+      Support
+    </a>
+    <button class="bottom-nav-item" onclick="openDrawer()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M20 21a8 8 0 1 0-16 0"/></svg>
+      Menu
+    </button>
+  </div>
+</nav>
+
+<!-- ── Mobile Drawer ── -->
+<div class="nav-drawer" id="nav-drawer">
+  <div class="nav-drawer-backdrop" onclick="closeDrawer()"></div>
+  <div class="nav-drawer-panel">
+    <button class="nav-drawer-close" onclick="closeDrawer()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+    </button>
+    <div style="font-size:0.7rem;color:var(--text-3);text-transform:uppercase;letter-spacing:0.1em;padding:0 14px;margin-bottom:6px">{{ username }}</div>
+    <a href="/dashboard" class="nav-drawer-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg>
+      Dashboard
+    </a>
+    <a href="/admin" class="nav-drawer-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+      Admin Panel
+    </a>
+    <hr class="nav-drawer-divider">
+    <button class="nav-drawer-item" onclick="Theme.toggle(); closeDrawer()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+      Toggle Theme
+    </button>
+    <hr class="nav-drawer-divider">
+    <a href="/logout" class="nav-drawer-item danger">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+      Sign Out
+    </a>
+  </div>
+</div>
+
+<script>
+function openDrawer() {
+  var d = document.getElementById('nav-drawer');
+  if (d) { d.classList.add('open'); document.body.style.overflow = 'hidden'; }
+}
+function closeDrawer() {
+  var d = document.getElementById('nav-drawer');
+  if (d) { d.classList.remove('open'); document.body.style.overflow = ''; }
+}
+document.addEventListener('keydown', function(e) { if (e.key === 'Escape') closeDrawer(); });
+</script>
+
+</body>
+</html>

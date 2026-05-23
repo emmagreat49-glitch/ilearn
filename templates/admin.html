@@ -1,0 +1,466 @@
+{% from "_icons.html" import icon, course_icon %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="csrf-token" content="{{ csrf_token() }}">
+  <title>iLEARN — Admin Dashboard</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}">
+  <script src="{{ url_for('static', filename='js/theme.js') }}"></script>
+  <style>
+    .admin-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; margin-bottom: 1.75rem; }
+    .admin-2col { display: grid; grid-template-columns: 1.4fr 1fr; gap: 1.25rem; margin-bottom: 1.5rem; }
+    .admin-3col { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1.25rem; margin-bottom: 1.5rem; }
+
+    /* ── Stat cards ── */
+    .stat-big {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius-xl); padding: 1.3rem 1.5rem;
+      display: flex; align-items: center; gap: 1rem;
+      transition: border-color 0.2s, transform 0.2s;
+      position: relative; overflow: hidden;
+    }
+    .stat-big:hover { border-color: var(--border-2); transform: translateY(-2px); }
+    .stat-big::before {
+      content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px;
+      opacity: 0; transition: opacity 0.3s;
+    }
+    .stat-big:hover::before { opacity: 1; }
+    .stat-big.sb-blue::before   { background: var(--grad-primary); }
+    .stat-big.sb-green::before  { background: var(--grad-green); }
+    .stat-big.sb-purple::before { background: var(--grad-purple); }
+    .stat-big.sb-amber::before  { background: var(--grad-warm); }
+    .stat-big.sb-rose::before   { background: linear-gradient(135deg,#f87171,#ef4444); }
+    .stat-big.sb-cyan::before   { background: linear-gradient(135deg,#22d3ee,#0891b2); }
+
+    .stat-icon-wrap {
+      width: 48px; height: 48px; border-radius: 13px; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .stat-icon-wrap svg { width: 22px; height: 22px; stroke-width: 1.8; }
+    .si-blue   { background: rgba(79,172,254,0.12);  color: var(--blue); }
+    .si-green  { background: rgba(52,211,153,0.12);  color: var(--green); }
+    .si-purple { background: rgba(167,139,250,0.12); color: var(--purple); }
+    .si-amber  { background: rgba(251,191,36,0.12);  color: var(--amber); }
+    .si-rose   { background: rgba(248,113,113,0.12); color: var(--rose); }
+    .si-cyan   { background: rgba(34,211,238,0.12);  color: var(--cyan); }
+
+    .stat-num { font-family: var(--font-display); font-size: 1.9rem; font-weight: 700; color: var(--white); line-height: 1; }
+    .stat-lbl { font-size: 0.76rem; color: var(--text-3); margin-top: 3px; font-weight: 500; }
+    .stat-sub { font-size: 0.7rem; color: var(--text-3); margin-top: 2px; }
+    .stat-sub.up { color: var(--green); }
+    .stat-sub.warn { color: var(--rose); }
+
+    /* ── Panels ── */
+    .panel-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-xl); overflow: hidden; }
+    .panel-card-hd {
+      background: var(--surface-2); padding: 0.85rem 1.3rem;
+      border-bottom: 1px solid var(--border);
+      font-family: var(--font-display); font-size: 0.84rem; font-weight: 700;
+      color: var(--white); display: flex; align-items: center;
+      justify-content: space-between; gap: 0.5rem;
+    }
+    .panel-card-hd-left { display: flex; align-items: center; gap: 8px; }
+    .panel-card-body { padding: 1.1rem 1.3rem; }
+
+    /* ── Engagement bar ── */
+    .engagement-wrap { display: flex; align-items: center; gap: 12px; }
+    .engagement-bar-track { flex: 1; height: 8px; background: var(--surface-3); border-radius: 99px; overflow: hidden; }
+    .engagement-bar-fill { height: 100%; border-radius: 99px; background: var(--grad-green); transition: width 1s ease; }
+    .engagement-pct-label { font-family: var(--font-display); font-size: 1.1rem; font-weight: 700; color: var(--green); min-width: 40px; text-align: right; }
+
+    /* ── Course table ── */
+    .course-table { width: 100%; border-collapse: collapse; }
+    .course-table th { font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.07em; color: var(--text-3); font-family: var(--font-display); padding: 8px 14px; text-align: left; border-bottom: 1px solid var(--border); }
+    .course-table td { padding: 10px 14px; border-bottom: 1px solid rgba(99,179,237,0.06); font-size: 0.84rem; color: var(--text); vertical-align: middle; }
+    .course-table tr:last-child td { border-bottom: none; }
+    .course-table tr:hover td { background: rgba(79,172,254,0.03); }
+    .mini-prog-wrap { display: flex; align-items: center; gap: 8px; min-width: 110px; }
+    .mini-prog-track { flex: 1; height: 5px; background: var(--surface-3); border-radius: 99px; overflow: hidden; }
+    .mini-prog-fill { height: 100%; border-radius: 99px; background: var(--grad-primary); transition: width 1s ease; }
+    .mini-prog-pct { font-size: 0.72rem; color: var(--text-2); white-space: nowrap; min-width: 32px; font-family: var(--font-code); }
+
+    /* ── Top learners ── */
+    .learner-row { display: flex; align-items: center; gap: 10px; padding: 9px 1.3rem; border-bottom: 1px solid rgba(99,179,237,0.06); }
+    .learner-row:last-child { border-bottom: none; }
+    .learner-rank { width: 22px; text-align: center; font-size: 0.78rem; font-weight: 700; color: var(--text-3); font-family: var(--font-display); flex-shrink: 0; }
+    .learner-rank.gold   { color: #f59e0b; }
+    .learner-rank.silver { color: #94a3b8; }
+    .learner-rank.bronze { color: #b45309; }
+    .learner-avatar { width: 30px; height: 30px; border-radius: 50%; background: var(--grad-primary); display: flex; align-items: center; justify-content: center; font-family: var(--font-display); font-size: 0.75rem; font-weight: 700; color: var(--bg); flex-shrink: 0; }
+    .learner-info { flex: 1; min-width: 0; }
+    .learner-name { font-size: 0.83rem; font-weight: 600; color: var(--white); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .learner-handle { font-size: 0.69rem; color: var(--text-3); }
+
+    /* ── Activity feed ── */
+    .activity-item { display: flex; align-items: flex-start; gap: 10px; padding: 9px 1.3rem; border-bottom: 1px solid rgba(99,179,237,0.06); font-size: 0.82rem; }
+    .activity-item:last-child { border-bottom: none; }
+    .act-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--green); margin-top: 6px; flex-shrink: 0; box-shadow: 0 0 5px var(--green); }
+    .act-body { flex: 1; line-height: 1.5; }
+    .act-user { font-weight: 600; color: var(--white); }
+    .act-lesson { color: var(--text-2); }
+    .act-course { color: var(--blue); font-size: 0.75rem; margin-top: 1px; }
+    .act-time { font-size: 0.7rem; color: var(--text-3); font-family: var(--font-code); white-space: nowrap; }
+
+    /* ── Messages preview ── */
+    .msg-row { display: flex; align-items: center; gap: 10px; padding: 10px 1.3rem; border-bottom: 1px solid rgba(99,179,237,0.06); cursor: pointer; transition: background 0.18s; }
+    .msg-row:last-child { border-bottom: none; }
+    .msg-row:hover { background: rgba(79,172,254,0.04); }
+    .msg-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--blue); flex-shrink: 0; box-shadow: 0 0 5px var(--blue); }
+    .msg-dot.read { background: var(--surface-3); box-shadow: none; }
+    .msg-info { flex: 1; min-width: 0; }
+    .msg-from { font-size: 0.82rem; font-weight: 600; color: var(--white); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .msg-subject { font-size: 0.74rem; color: var(--text-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .msg-time { font-size: 0.69rem; color: var(--text-3); white-space: nowrap; font-family: var(--font-code); }
+
+    /* ── Hero ── */
+    .admin-hero { background: var(--bg-2); border: 1px solid var(--border); border-radius: var(--radius-xl); padding: 1.8rem 2.2rem; margin-bottom: 1.75rem; position: relative; overflow: hidden; }
+    .admin-hero::before { content: ''; position: absolute; inset: 0; background: linear-gradient(135deg, rgba(248,113,113,0.05), rgba(167,139,250,0.04)); pointer-events: none; }
+    .admin-hero-inner { position: relative; z-index: 1; display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap; }
+    .admin-hero h1 { font-size: 1.7rem; margin-bottom: 0.25rem; }
+    .admin-hero p { color: var(--text-2); font-size: 0.86rem; }
+    .admin-hero-actions { display: flex; gap: 0.6rem; flex-wrap: wrap; margin-top: 1rem; }
+
+    /* ── Highlight card ── */
+    .highlight-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-xl); padding: 1.1rem 1.3rem; }
+    .highlight-label { font-size: 0.7rem; color: var(--text-3); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 0.35rem; }
+    .highlight-value { font-family: var(--font-display); font-size: 1.05rem; font-weight: 700; color: var(--white); }
+    .highlight-sub { font-size: 0.74rem; color: var(--text-3); margin-top: 2px; }
+
+    @media (max-width: 900px) { .admin-grid { grid-template-columns: 1fr 1fr; } .admin-2col, .admin-3col { grid-template-columns: 1fr; } }
+    @media (max-width: 480px) { .admin-grid { grid-template-columns: 1fr; } .admin-hero { padding: 1.2rem; } }
+  </style>
+</head>
+<body>
+
+<nav class="navbar">
+  <div class="nav-brand">iLEARN<sup>BETA</sup></div>
+  <div class="nav-links">
+    <a href="/dashboard">Dashboard</a>
+    <a href="/support">Support</a>
+    <a href="/admin" style="color:var(--rose)">Admin</a>
+    <a href="/admin/messages">
+      Messages
+      {% if unread_msgs > 0 %}<span class="badge badge-rose" style="font-size:0.65rem;padding:2px 6px;">{{ unread_msgs }}</span>{% endif %}
+    </a>
+    <a href="/analytics">Analytics</a>
+  </div>
+  <div class="nav-right">
+    <div class="nav-avatar">{{ (full_name or username)[0].upper() }}</div>
+    <span class="nav-username">{{ full_name or username }}</span>
+    <button class="theme-toggle" id="theme-btn" onclick="Theme.toggle()">Light</button>
+    <a href="/logout" class="btn-nav-logout">Sign Out</a>
+  </div>
+  <button class="nav-hamburger" onclick="openDrawer()" aria-label="Open menu">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+  </button>
+</nav>
+
+<div class="page-wrap">
+
+  <!-- ── Hero ── -->
+  <div class="admin-hero">
+    <div class="admin-hero-inner">
+      <div>
+        <div style="font-size:0.7rem;color:var(--rose);text-transform:uppercase;letter-spacing:0.1em;font-weight:700;margin-bottom:0.3rem;display:flex;align-items:center;gap:6px;">
+          {{ icon("shield","icon-sm") }} Admin Panel
+        </div>
+        <h1>Platform Overview</h1>
+        <p>Real-time statistics — updates on every page load.</p>
+        <div class="admin-hero-actions">
+          <a href="/admin/messages" class="btn btn-primary btn-sm">
+            {{ icon("message-circle","icon-sm") }} Messages
+            {% if unread_msgs > 0 %}<span style="margin-left:4px;background:rgba(255,255,255,0.25);border-radius:99px;padding:1px 7px;font-size:0.68rem;">{{ unread_msgs }}</span>{% endif %}
+          </a>
+          <a href="/analytics" class="btn btn-secondary btn-sm">{{ icon("bar-chart-2","icon-sm") }} Analytics</a>
+          <a href="/dashboard" class="btn btn-ghost btn-sm">{{ icon("layout-dashboard","icon-sm") }} Dashboard</a>
+        </div>
+      </div>
+      <!-- Engagement summary on the right -->
+      <div style="min-width:220px; background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-lg); padding:1.1rem 1.25rem;">
+        <div style="font-size:0.7rem;color:var(--text-3);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:0.6rem;">Platform Engagement</div>
+        <div class="engagement-wrap">
+          <div class="engagement-bar-track">
+            <div class="engagement-bar-fill" data-pct="{{ engagement_pct }}" style="width:0%"></div>
+          </div>
+          <div class="engagement-pct-label">{{ engagement_pct }}%</div>
+        </div>
+        <div style="font-size:0.72rem;color:var(--text-3);margin-top:6px;">{{ active_users }} of {{ total_users }} users active</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Stat Cards (6 cards, 3-col) ── -->
+  <div class="admin-grid">
+
+    <div class="stat-big sb-blue">
+      <div class="stat-icon-wrap si-blue">{{ icon("user","icon-md") }}</div>
+      <div>
+        <div class="stat-num">{{ total_users }}</div>
+        <div class="stat-lbl">Registered Users</div>
+        <div class="stat-sub {% if new_users_week > 0 %}up{% endif %}">
+          {% if new_users_week > 0 %}+{{ new_users_week }} this week{% else %}{{ new_users_month }} this month{% endif %}
+        </div>
+      </div>
+    </div>
+
+    <div class="stat-big sb-green">
+      <div class="stat-icon-wrap si-green">{{ icon("check-circle","icon-md") }}</div>
+      <div>
+        <div class="stat-num">{{ total_completions }}</div>
+        <div class="stat-lbl">Lessons Completed</div>
+        <div class="stat-sub">across all users</div>
+      </div>
+    </div>
+
+    <div class="stat-big sb-purple">
+      <div class="stat-icon-wrap si-purple">{{ icon("book-open","icon-md") }}</div>
+      <div>
+        <div class="stat-num">{{ total_courses }}</div>
+        <div class="stat-lbl">Total Courses</div>
+        <div class="stat-sub">{{ total_lessons }} lessons</div>
+      </div>
+    </div>
+
+    <div class="stat-big sb-amber">
+      <div class="stat-icon-wrap si-amber">{{ icon("flag","icon-md") }}</div>
+      <div>
+        <div class="stat-num">{{ total_quiz_attempts }}</div>
+        <div class="stat-lbl">Quiz Attempts</div>
+        <div class="stat-sub">{{ total_quiz_q }} questions total</div>
+      </div>
+    </div>
+
+    <div class="stat-big sb-rose">
+      <div class="stat-icon-wrap si-rose">{{ icon("message-circle","icon-md") }}</div>
+      <div>
+        <div class="stat-num">{{ total_messages }}</div>
+        <div class="stat-lbl">Support Messages</div>
+        <div class="stat-sub {% if unread_msgs > 0 %}warn{% endif %}">
+          {% if unread_msgs > 0 %}{{ unread_msgs }} unread{% else %}All read{% endif %}
+        </div>
+      </div>
+    </div>
+
+    <div class="stat-big sb-cyan">
+      <div class="stat-icon-wrap si-cyan">{{ icon("zap","icon-md") }}</div>
+      <div>
+        {% set avg_done = (total_completions / total_users) | round(1) if total_users > 0 else 0 %}
+        <div class="stat-num">{{ avg_done }}</div>
+        <div class="stat-lbl">Avg Lessons / User</div>
+        <div class="stat-sub">out of {{ total_lessons }} available</div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ── Highlights row ── -->
+  <div class="admin-3col">
+    <div class="highlight-card">
+      <div class="highlight-label">{{ icon("trophy","icon-sm") }} Most Popular Course</div>
+      <div class="highlight-value">{{ popular_course }}</div>
+      <div class="highlight-sub">Most enrolled by users</div>
+    </div>
+    <div class="highlight-card">
+      <div class="highlight-label">{{ icon("user","icon-sm") }} New Users This Month</div>
+      <div class="highlight-value" style="color:var(--green)">+{{ new_users_month }}</div>
+      <div class="highlight-sub">{{ new_users_week }} in the last 7 days</div>
+    </div>
+    <div class="highlight-card">
+      <div class="highlight-label">{{ icon("target","icon-sm") }} Engagement Rate</div>
+      <div class="highlight-value" style="color:var(--blue)">{{ engagement_pct }}%</div>
+      <div class="highlight-sub">Users with at least 1 completion</div>
+    </div>
+  </div>
+
+  <!-- ── Course Breakdown + Top Learners ── -->
+  <div class="admin-2col">
+
+    <!-- Course breakdown -->
+    <div class="panel-card">
+      <div class="panel-card-hd">
+        <div class="panel-card-hd-left">{{ icon("book-open","icon-sm") }} Course Breakdown</div>
+        <span class="badge badge-blue">{{ total_courses }} courses</span>
+      </div>
+      <div style="padding:0; overflow-x:auto;">
+        <table class="course-table">
+          <thead>
+            <tr>
+              <th>Course</th>
+              <th>Lessons</th>
+              <th>Enrolled</th>
+              <th style="min-width:130px">Completion</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for c in course_stats %}
+            <tr>
+              <td>
+                <a href="/course/{{ c.id }}" style="color:var(--white);font-weight:600;text-decoration:none;font-size:0.82rem;">{{ c.title }}</a>
+                <div style="font-size:0.69rem;color:var(--text-3);margin-top:1px;">{{ c.level }}</div>
+              </td>
+              <td style="color:var(--text-2)">{{ c.lesson_count }}</td>
+              <td>
+                <span class="badge badge-{% if c.enrolled > 0 %}blue{% else %}cyan{% endif %}" style="font-size:0.67rem">{{ c.enrolled }}</span>
+              </td>
+              <td>
+                <div class="mini-prog-wrap">
+                  <div class="mini-prog-track">
+                    <div class="mini-prog-fill" data-pct="{{ c.pct }}" style="width:0%"></div>
+                  </div>
+                  <span class="mini-prog-pct">{{ c.pct }}%</span>
+                </div>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Right column -->
+    <div style="display:flex;flex-direction:column;gap:1.25rem;">
+
+      <!-- Top learners -->
+      <div class="panel-card">
+        <div class="panel-card-hd">
+          <div class="panel-card-hd-left">{{ icon("trophy","icon-sm") }} Top Learners</div>
+          <span class="badge badge-amber">by completions</span>
+        </div>
+        {% for u in top_users %}
+        <div class="learner-row">
+          <div class="learner-rank {% if loop.index==1 %}gold{% elif loop.index==2 %}silver{% elif loop.index==3 %}bronze{% endif %}">
+            {% if loop.index <= 3 %}
+              <svg viewBox="0 0 24 24" fill="currentColor" width="14" height="14"><path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 17l-6.2 4.3 2.4-7.4L2 9.4h7.6z"/></svg>
+            {% else %}{{ loop.index }}{% endif %}
+          </div>
+          <div class="learner-avatar">{{ (u.full_name or u.username)[0].upper() }}</div>
+          <div class="learner-info">
+            <div class="learner-name">{{ u.full_name or u.username }}</div>
+            <div class="learner-handle">@{{ u.username }}</div>
+          </div>
+          <span class="badge badge-{% if u.done > 0 %}green{% else %}cyan{% endif %}">{{ u.done }}</span>
+        </div>
+        {% else %}
+        <div style="text-align:center;padding:1.5rem;color:var(--text-3);font-size:0.85rem;">No activity yet.</div>
+        {% endfor %}
+      </div>
+
+      <!-- Recent messages preview -->
+      <div class="panel-card">
+        <div class="panel-card-hd">
+          <div class="panel-card-hd-left">{{ icon("message-circle","icon-sm") }} Recent Messages</div>
+          <a href="/admin/messages" style="font-size:0.75rem;color:var(--blue);">View all →</a>
+        </div>
+        {% for m in recent_messages %}
+        <a href="/admin/messages" class="msg-row" style="text-decoration:none;">
+          <div class="msg-dot {% if m.is_read %}read{% endif %}"></div>
+          <div class="msg-info">
+            <div class="msg-from">{{ m.name }}</div>
+            <div class="msg-subject">{{ m.subject }}</div>
+          </div>
+          <div class="msg-time">{{ m.submitted_at[:10] if m.submitted_at else '' }}</div>
+        </a>
+        {% else %}
+        <div style="text-align:center;padding:1.5rem;color:var(--text-3);font-size:0.85rem;">No messages yet.</div>
+        {% endfor %}
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ── Recent Activity ── -->
+  <div class="panel-card" style="margin-bottom:1rem;">
+    <div class="panel-card-hd">
+      <div class="panel-card-hd-left">{{ icon("zap","icon-sm") }} Recent Completions</div>
+      <span class="badge badge-green">live</span>
+    </div>
+    {% if recent_activity %}
+      {% for r in recent_activity %}
+      <div class="activity-item">
+        <div class="act-dot"></div>
+        <div class="act-body">
+          <span class="act-user">@{{ r.username }}</span>
+          <span style="color:var(--text-3);"> completed </span>
+          <span class="act-lesson">{{ r.lesson_title }}</span>
+          <div class="act-course">{{ r.course_title }}</div>
+        </div>
+        <div class="act-time">{% if r.completed_at %}{{ r.completed_at[:16].replace('T',' ') }}{% endif %}</div>
+      </div>
+      {% endfor %}
+    {% else %}
+    <div style="text-align:center;padding:2rem;color:var(--text-3);">
+      No completions recorded yet.
+    </div>
+    {% endif %}
+  </div>
+
+</div>
+
+
+  <!-- ── All Registered Users ── -->
+  <div class="panel-card" style="margin-bottom:1rem;">
+    <div class="panel-card-hd">
+      <div class="panel-card-hd-left">
+        {{ icon("user","icon-sm") }} Registered Users
+      </div>
+      <span class="badge badge-purple">{{ total_non_admin }} student{{ 's' if total_non_admin != 1 }}</span>
+    </div>
+    <div style="overflow-x:auto;">
+      <table class="course-table">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Name</th>
+            <th>Username</th>
+            <th>Email</th>
+            <th>Joined</th>
+            <th>Lessons Done</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% set student_list = all_users | rejectattr('username','equalto','admin') | list %}
+          {% if student_list %}
+            {% for u in student_list %}
+            <tr>
+              <td style="color:var(--text-3);font-family:var(--font-code);">{{ loop.index }}</td>
+              <td>
+                <div style="font-weight:600;color:var(--white);font-size:0.83rem;">{{ u.full_name or '—' }}</div>
+              </td>
+              <td style="font-family:var(--font-code);font-size:0.8rem;color:var(--text-2);">@{{ u.username }}</td>
+              <td style="font-size:0.78rem;color:var(--text-3);">{{ u.email or '—' }}</td>
+              <td style="font-size:0.76rem;color:var(--text-3);font-family:var(--font-code);white-space:nowrap;">
+                {{ u.created_at[:10] if u.created_at else '—' }}
+              </td>
+              <td>
+                {% if u.lessons_done > 0 %}
+                  <span class="badge badge-green" style="font-size:0.68rem;">{{ u.lessons_done }} lesson{{ 's' if u.lessons_done != 1 }}</span>
+                {% else %}
+                  <span style="font-size:0.76rem;color:var(--text-3);">Not started</span>
+                {% endif %}
+              </td>
+            </tr>
+            {% endfor %}
+          {% else %}
+            <tr>
+              <td colspan="6" style="text-align:center;padding:2rem;color:var(--text-3);">
+                No students registered yet.
+              </td>
+            </tr>
+          {% endif %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+<div id="toast"></div>
+<script src="{{ url_for('static', filename='js/main.js') }}"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  // Animate progress bars
+  document.querySelectorAll('[data-pct]').forEach(function(el) {
+    setTimeout(function() { el.style.width = (parseInt(el.dataset.pct) || 0) + '%'; }, 250);
+  });
+});
+</script>

@@ -1,0 +1,657 @@
+{% from "_icons.html" import icon, course_icon %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="csrf-token" content="{{ csrf_token() }}">
+  <title>iLEARN — {{ lesson.lesson_title }}</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}">
+  <script src="{{ url_for('static', filename='js/theme.js') }}"></script>
+  <style>
+    .lesson-layout {
+      display: grid; grid-template-columns: 1fr 330px;
+      gap: 1.5rem; align-items: start;
+    }
+    .lesson-header {
+      background: var(--bg-2); border: 1px solid var(--border);
+      border-radius: var(--radius-xl); padding: 1.6rem 2rem; margin-bottom: 1.25rem;
+    }
+    .lesson-title-h { font-size: 1.55rem; margin-bottom: 0.5rem; }
+    .lesson-body {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius-xl); padding: 1.9rem 2.2rem; margin-bottom: 1.25rem;
+    }
+
+    /* Quiz */
+    .quiz-block {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius-xl); padding: 1.6rem 2rem; margin-bottom: 1.25rem;
+    }
+    .quiz-hd {
+      font-family: var(--font-display); font-size: 1rem; font-weight: 700;
+      color: var(--white); margin-bottom: 1.25rem;
+      display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.5rem;
+    }
+    .quiz-q { background: var(--bg-2); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 1.1rem 1.3rem; margin-bottom: 1rem; }
+    .quiz-q-text { font-size: 0.92rem; font-weight: 600; color: var(--white); margin-bottom: 0.8rem; line-height: 1.5; }
+
+    /* Quiz progress bar */
+    .quiz-progress-row {
+      display: flex; align-items: center; justify-content: space-between;
+      padding-top: 0.75rem; border-top: 1px solid var(--border);
+      font-size: 0.8rem; color: var(--text-3); flex-wrap: wrap; gap: 0.5rem;
+    }
+    .quiz-progress-track {
+      width: 100%; background: var(--surface-3); border-radius: 99px;
+      height: 4px; margin-top: 0.5rem;
+    }
+    .quiz-progress-fill {
+      height: 100%; border-radius: 99px; background: var(--grad-primary);
+      transition: width 0.4s ease; width: 0%;
+    }
+
+    /* Mark Complete — locked state */
+    .complete-btn-wrap { position: relative; }
+    .complete-locked {
+      background: var(--surface-3) !important;
+      color: var(--text-3) !important;
+      cursor: not-allowed !important;
+      box-shadow: none !important;
+      transform: none !important;
+      border: 1px solid var(--border) !important;
+    }
+    .complete-locked::after { display: none !important; }
+    .lock-tooltip {
+      position: absolute; bottom: calc(100% + 8px); left: 50%; transform: translateX(-50%);
+      background: var(--surface-2); border: 1px solid var(--border);
+      color: var(--text-2); font-size: 0.75rem; padding: 6px 12px;
+      border-radius: 8px; white-space: nowrap; pointer-events: none;
+      opacity: 0; transition: opacity 0.2s;
+      box-shadow: var(--shadow); z-index: 10;
+    }
+    .complete-btn-wrap:hover .lock-tooltip { opacity: 1; }
+    .lock-tooltip::after {
+      content: ''; position: absolute; top: 100%; left: 50%; transform: translateX(-50%);
+      border: 5px solid transparent; border-top-color: var(--border);
+    }
+
+    /* Nav row */
+    .nav-row {
+      display: flex; align-items: center; justify-content: space-between;
+      gap: 0.75rem; flex-wrap: wrap;
+    }
+    .nav-row > div { display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: center; }
+
+    /* Chat sidebar */
+    .chat-sidebar { position: sticky; top: 78px; }
+    .chat-panel-wrap {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius-xl); overflow: hidden;
+      display: flex; flex-direction: column;
+      max-height: calc(100vh - 110px);
+    }
+    .chat-hd {
+      background: var(--surface-2); padding: 0.85rem 1.2rem;
+      border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; gap: 8px;
+    }
+    .chat-hd-title { font-family: var(--font-display); font-size: 0.87rem; font-weight: 700; color: var(--white); }
+    .chat-msgs {
+      flex: 1; overflow-y: auto; padding: 1rem;
+      display: flex; flex-direction: column; gap: 0.5rem;
+      min-height: 200px; max-height: 340px;
+    }
+    .chat-input-area { padding: 0.65rem; border-top: 1px solid var(--border); display: flex; gap: 0.5rem; }
+    .chat-footer-note { padding: 0.45rem 1rem; font-size: 0.7rem; color: var(--text-3); text-align: center; border-top: 1px solid var(--border); }
+
+    @media (max-width: 900px) {
+      .lesson-layout { grid-template-columns: 1fr; }
+      .chat-sidebar { position: static; }
+      .chat-panel-wrap { max-height: 400px; }
+    }
+    @media (max-width: 540px) {
+      .lesson-body { padding: 1.25rem; }
+      .quiz-block { padding: 1.25rem; }
+    }
+  </style>
+</head>
+<body>
+
+<nav class="navbar">
+  <div class="nav-brand">iLEARN<sup>BETA</sup></div>
+  <div class="nav-links">
+    <a href="/dashboard">Dashboard</a>
+    <a href="/support">Support</a>
+    <a href="/course/{{ course.id }}">{{ course.title }}</a>
+    <a href="/contact">Contact</a>
+  </div>
+  <div class="nav-right">
+    <button class="theme-toggle" id="theme-btn" onclick="Theme.toggle()">Light</button>
+    <a href="/logout" class="btn-nav-logout" style="display:inline-flex;align-items:center;gap:5px;">{{ icon("log-out","icon-sm") }} Sign Out</a>
+  </div>
+  <!-- Mobile hamburger (shown only on mobile via CSS) -->
+  <button class="nav-hamburger" onclick="openDrawer()" aria-label="Open menu">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+  </button>
+</nav>
+
+<div class="page-wrap">
+<div class="lesson-layout">
+
+  <!-- ═══ MAIN COLUMN ═══ -->
+  <div>
+
+    <!-- Header -->
+    <div class="lesson-header">
+      <div class="breadcrumb mb-2">
+        <a href="/dashboard">Dashboard</a>
+        <span>›</span>
+        <a href="/course/{{ course.id }}">{{ course.title }}</a>
+        <span>›</span>
+        <span>{{ lesson.lesson_title }}</span>
+      </div>
+      <h1 class="lesson-title-h">{{ lesson.lesson_title }}</h1>
+      <div class="flex gap-2 mt-1" style="flex-wrap:wrap">
+        <span class="badge badge-blue">{{ icon("book-open","icon-sm") }} {{ course.title }}</span>
+        <span class="badge badge-purple">{{ icon("clock","icon-sm") }} ~{{ lesson.duration_mins }} min</span>
+        {% if is_completed %}
+          <span class="badge badge-green completion-status">{{ icon("check-circle","icon-sm") }} Completed</span>
+        {% else %}
+          <span class="badge badge-amber completion-status">In Progress</span>
+        {% endif %}
+      </div>
+
+      <!-- ── Course progress mini-bar (live-updates after marking complete) ── -->
+      {% set all_lesson_ids = [] %}
+      {% set total_in_course = lesson.course_id %}
+      <div style="margin-top:1rem; padding-top:0.85rem; border-top:1px solid var(--border)">
+        <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:5px;">
+          <span style="font-size:0.75rem; color:var(--text-3);">Course Progress</span>
+          <span style="font-size:0.75rem; font-weight:600; color:var(--blue);" id="course-prog-pct">…</span>
+        </div>
+        <div class="progress-track" style="height:5px;">
+          <div class="lesson-course-prog-fill progress-fill" style="width:0%; transition: width 0.8s ease;"></div>
+        </div>
+        <div style="font-size:0.7rem; color:var(--text-3); margin-top:4px;" id="course-prog-text">Loading…</div>
+      </div>
+    </div>
+
+    <!-- Lesson content -->
+    <div class="lesson-body reveal">
+      <div class="lesson-content">
+        {{ lesson.lesson_content | safe }}
+      </div>
+    </div>
+
+    <!-- Quiz -->
+    {% if quizzes %}
+    <div class="quiz-block reveal reveal-delay-1">
+      <div class="quiz-hd">
+        {{ icon("flag","icon-sm") }} Knowledge Check
+        <div class="flex gap-1" style="align-items:center">
+          <span class="badge badge-amber" id="quiz-status-badge">0 / {{ quizzes|length }} answered</span>
+        </div>
+      </div>
+
+      {% for q in quizzes %}
+      <div class="quiz-q" id="qq-{{ q.id }}">
+        <div class="quiz-q-text">{{ loop.index }}. {{ q.question }}</div>
+        <div>
+          <button class="quiz-option" data-value="A"
+            onclick="lessonQuiz.answer({{ q.id }}, 'A', '{{ q.correct_answer }}', this)">
+            <span class="opt-label">A</span> {{ q.option_a }}
+          </button>
+          <button class="quiz-option" data-value="B"
+            onclick="lessonQuiz.answer({{ q.id }}, 'B', '{{ q.correct_answer }}', this)">
+            <span class="opt-label">B</span> {{ q.option_b }}
+          </button>
+          <button class="quiz-option" data-value="C"
+            onclick="lessonQuiz.answer({{ q.id }}, 'C', '{{ q.correct_answer }}', this)">
+            <span class="opt-label">C</span> {{ q.option_c }}
+          </button>
+        </div>
+        {% if q.explanation %}
+        <div class="q-explanation" id="expl-{{ q.id }}"
+          style="display:none; margin-top:0.65rem; padding:9px 13px;
+          background:rgba(79,172,254,0.06); border-radius:var(--radius);
+          font-size:0.82rem; color:var(--text-2); border-left:3px solid var(--blue);">
+          {{ q.explanation }}
+        </div>
+        {% endif %}
+      </div>
+      {% endfor %}
+
+      <div class="quiz-progress-row">
+        <span id="quiz-answered-label">Answer all {{ quizzes|length }} questions to unlock completion</span>
+        <span id="quiz-score-label" style="font-weight:600; color:var(--blue)"></span>
+      </div>
+      <div class="quiz-progress-track">
+        <div class="quiz-progress-fill" id="quiz-prog-fill"></div>
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- Navigation -->
+    <div class="nav-row">
+      <div>
+        <a href="/course/{{ course.id }}" class="btn btn-ghost btn-sm">{{ icon("arrow-left","icon-sm") }} Overview</a>
+        {% if prev_lesson_id %}
+          <a href="/lesson/{{ prev_lesson_id }}" class="btn btn-secondary btn-sm">{{ icon("arrow-left","icon-sm") }} Previous</a>
+        {% endif %}
+      </div>
+      <div style="display:flex; align-items:center; gap:0.6rem; flex-wrap:wrap;">
+        {% if not is_completed %}
+          <!-- Time-on-page counter — updates every second via JS -->
+          {% if min_lesson_seconds > 0 %}
+          <span id="time-display" style="font-size:0.75rem; color:var(--amber); font-family:var(--font-code);">
+            Calculating…
+          </span>
+          {% endif %}
+
+          <div class="complete-btn-wrap" id="complete-wrap">
+            {% if quizzes or min_lesson_seconds > 0 %}
+              <!-- Locked until quiz done AND time requirement met -->
+              <button class="btn btn-sm complete-locked" id="complete-btn"
+                onclick="lessonQuiz.tryComplete({{ lesson.id }}, this)" disabled>
+                 Complete Lesson
+              </button>
+              <div class="lock-tooltip" id="lock-tip">
+                {% if quizzes %}Answer all quiz questions first{% else %}Keep reading to unlock{% endif %}
+              </div>
+            {% else %}
+              <!-- No quiz, no time requirement — always unlocked -->
+              <button class="btn btn-success btn-sm" id="complete-btn"
+                onclick="doMarkComplete(this)">
+                Mark Complete
+              </button>
+            {% endif %}
+          </div>
+        {% else %}
+          <span class="badge badge-green" style="padding:8px 16px; font-size:0.85rem"> Completed</span>
+        {% endif %}
+        {% if next_lesson_id %}
+          <a href="/lesson/{{ next_lesson_id }}" class="btn btn-primary btn-sm" id="next-btn">Next Lesson {{ icon("arrow-right","icon-sm") }}</a>
+        {% else %}
+          <a href="/course/{{ course.id }}" class="btn btn-primary btn-sm">{{ icon("trophy","icon-sm") }} Finish Course</a>
+        {% endif %}
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ═══ CHAT SIDEBAR ═══ -->
+  <div class="chat-sidebar">
+    <div class="chat-panel-wrap">
+      <div class="chat-hd">
+        <div class="ai-dot"></div>
+        <span class="chat-hd-title">{{ icon("message-circle","icon-sm") }} AI Study Assistant</span>
+      </div>
+      <div class="chat-msgs" id="chat-messages">
+        <div class="chat-msg bot">
+           Hi! Ask me anything about <strong>{{ lesson.lesson_title }}</strong> or any topic in this course.
+        </div>
+        <div class="chat-msg bot">
+           Try: "Explain this simply", "Give me a real-world example", or ask about {{ course.title | lower }}.
+        </div>
+      </div>
+      <div class="chat-input-area">
+        <input class="chat-input" type="text" id="chat-input"
+          placeholder="Ask a question…" onkeypress="Chatbot.handleKeypress(event)">
+        <button class="chat-send" onclick="Chatbot.send()" title="Send">➤</button>
+      </div>
+      <div class="chat-footer-note">Press Enter to send · iLEARN AI</div>
+    </div>
+  </div>
+
+</div>
+</div>
+
+<div id="toast"></div>
+<script src="{{ url_for('static', filename='js/main.js') }}"></script>
+<script>
+  // ════════════════════════════════════════════════════════════
+  // LESSON PAGE CONTROLLER
+  // Features: time-on-page tracking, quiz enforcement with
+  //           server-side recording, AI chat with lesson context
+  // ════════════════════════════════════════════════════════════
+
+  // Constants injected by Flask/Jinja2
+  var LESSON_ID        = {{ lesson.id }};
+  var COURSE_ID        = {{ course.id }};   // used by markLessonComplete for live progress
+  var LESSON_TITLE     = {{ lesson.lesson_title | tojson }};
+  var COURSE_TITLE     = {{ course.title | tojson }};
+  var TOTAL_QUESTIONS  = {{ quizzes|length if quizzes else 0 }};
+  var MIN_SECONDS      = {{ min_lesson_seconds }};  // from config.py
+
+  // ── Load course progress immediately on page open ─────────────
+  (async function loadCourseProgress() {
+    try {
+      var r    = await fetch('/api/course_progress/' + COURSE_ID);
+      var prog = await r.json();
+      var fill = document.querySelector('.lesson-course-prog-fill');
+      var text = document.getElementById('course-prog-text');
+      var pct  = document.getElementById('course-prog-pct');
+      if (fill) setTimeout(function() { fill.style.width = prog.percent + '%'; }, 200);
+      if (pct)  pct.textContent  = prog.percent + '%';
+      if (text) text.textContent = prog.completed + ' of ' + prog.total + ' lessons completed';
+    } catch(e) {
+      var text = document.getElementById('course-prog-text');
+      if (text) text.textContent = '';
+    }
+  })();
+
+  // ── 1. TIME-ON-PAGE TRACKER ──────────────────────────────────
+  var _startTime   = Date.now();
+  var _timeInterval;
+
+  function secondsOnPage() {
+    return Math.floor((Date.now() - _startTime) / 1000);
+  }
+
+  function updateTimeDisplay() {
+    var el  = document.getElementById('time-display');
+    var s   = secondsOnPage();
+    var met = (MIN_SECONDS === 0 || s >= MIN_SECONDS);
+
+    if (el) {
+      if (!met) {
+        el.textContent = 'Read for ' + (MIN_SECONDS - s) + 's more to unlock';
+        el.style.color = 'var(--amber)';
+      } else {
+        el.textContent = 'Time requirement met ✓';
+        el.style.color = 'var(--green)';
+      }
+    }
+
+    // If time is now met and there's no quiz, unlock the button
+    if (met && TOTAL_QUESTIONS === 0) {
+      _unlockCompleteBtn();
+      clearInterval(_timeInterval);
+    }
+
+    // If quiz is already all done and time just became met, unlock too
+    if (met && lessonQuiz.allDone) {
+      _unlockCompleteBtn();
+      clearInterval(_timeInterval);
+    }
+  }
+
+  function _unlockCompleteBtn() {
+    var btn = document.getElementById('complete-btn');
+    var tip = document.getElementById('lock-tip');
+    if (!btn || !btn.disabled) return;   // already unlocked or doesn't exist
+
+    btn.disabled  = false;
+    btn.className = 'btn btn-success btn-sm';
+    btn.innerHTML = 'Mark Complete';
+    btn.onclick   = function() { doMarkComplete(btn); };
+    if (tip) tip.style.display = 'none';
+    Toast.success(' Lesson unlocked! Click "Mark Complete" when you are ready.');
+  }
+
+  // ── 2. QUIZ SYSTEM ───────────────────────────────────────────
+  var lessonQuiz = {
+    answered: {},
+    score:    0,
+    allDone:  false,
+
+    answer: function(qId, selected, correct, btn) {
+      if (this.answered[qId] !== undefined) return;
+
+      this.answered[qId] = (selected === correct);
+      if (selected === correct) this.score++;
+
+      // Highlight options
+      var qEl = document.getElementById('qq-' + qId);
+      qEl.querySelectorAll('.quiz-option').forEach(function(opt) {
+        opt.disabled = true;
+        if (opt.dataset.value === correct) opt.classList.add('correct');
+      });
+      btn.classList.add(selected === correct ? 'correct' : 'wrong');
+      Toast[selected === correct ? 'success' : 'error'](
+        selected === correct ? 'Correct!' : 'Incorrect — correct answer highlighted.'
+      );
+
+      // Show explanation
+      var expl = document.getElementById('expl-' + qId);
+      if (expl) expl.style.display = 'block';
+
+      // Record server-side — backend checks this before allowing completion
+      fetch('/api/record_answer', {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({ question_id: qId, lesson_id: LESSON_ID })
+      }).catch(function(e) { console.warn('[iLEARN] record_answer error:', e); });
+
+      this.updateProgress();
+    },
+
+    updateProgress: function() {
+      var done = Object.keys(this.answered).length;
+      var pct  = TOTAL_QUESTIONS > 0 ? Math.round(done / TOTAL_QUESTIONS * 100) : 100;
+
+      var fill  = document.getElementById('quiz-prog-fill');
+      var label = document.getElementById('quiz-answered-label');
+      var score = document.getElementById('quiz-score-label');
+      var badge = document.getElementById('quiz-status-badge');
+
+      if (fill)  fill.style.width = pct + '%';
+      if (badge) badge.textContent = done + ' / ' + TOTAL_QUESTIONS + ' answered';
+      if (done < TOTAL_QUESTIONS) {
+        if (label) label.textContent = 'Answer all ' + TOTAL_QUESTIONS + ' questions to unlock completion';
+        if (score) score.textContent = '';
+      } else {
+        if (label) label.textContent = 'All questions answered! ';
+        if (score) score.textContent = 'Score: ' + this.score + ' / ' + TOTAL_QUESTIONS;
+        this.allDone = true;
+
+        // Check if time requirement is also met
+        var timeMet = (MIN_SECONDS === 0 || secondsOnPage() >= MIN_SECONDS);
+        if (timeMet) {
+          _unlockCompleteBtn();
+        } else {
+          Toast.info('Quiz done! Keep reading — ' + (MIN_SECONDS - secondsOnPage()) + 's left.');
+        }
+      }
+    },
+
+    tryComplete: function(lessonId, btn) {
+      // Called when user clicks the still-locked button
+      var done    = Object.keys(this.answered).length;
+      var timeMet = (MIN_SECONDS === 0 || secondsOnPage() >= MIN_SECONDS);
+
+      if (done < TOTAL_QUESTIONS) {
+        Toast.error('Answer all ' + TOTAL_QUESTIONS + ' quiz questions first.');
+        var qb = document.querySelector('.quiz-block');
+        if (qb) {
+          qb.style.transition = 'transform 0.1s';
+          qb.style.transform  = 'translateX(6px)';
+          setTimeout(function() { qb.style.transform = 'translateX(-6px)'; }, 100);
+          setTimeout(function() { qb.style.transform = 'translateX(0)'; },   200);
+        }
+        return;
+      }
+      if (!timeMet) {
+        Toast.error('Keep reading for ' + (MIN_SECONDS - secondsOnPage()) + ' more seconds.');
+        return;
+      }
+    }
+  };
+
+  // ── 3. MARK COMPLETE — sends time + quiz_passed to backend ───
+  async function doMarkComplete(btn) {
+    var timeMet  = (MIN_SECONDS === 0 || secondsOnPage() >= MIN_SECONDS);
+    var quizDone = (TOTAL_QUESTIONS === 0 || lessonQuiz.allDone);
+
+    if (!timeMet) {
+      Toast.error('Please finish reading before marking complete.');
+      return;
+    }
+    if (!quizDone) {
+      Toast.error('Answer all quiz questions first.');
+      return;
+    }
+
+    btn.disabled  = true;
+    btn.innerHTML = '<span class="spinner"></span> Saving…';
+
+    try {
+      var resp   = await fetch('/api/complete_lesson', {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({
+          lesson_id:   LESSON_ID,
+          time_spent:  secondsOnPage(),
+          quiz_passed: quizDone
+        })
+      });
+      var result = await resp.json();
+
+      if (result.status === 'ok') {
+        btn.innerHTML = ' Completed!';
+        btn.className = 'btn btn-ghost btn-sm';
+        Toast.success('Lesson complete! Great work ');
+        document.querySelectorAll('.completion-status').forEach(function(el) {
+          el.textContent = 'Completed';
+          el.className   = 'badge badge-green completion-status';
+        });
+
+        // ── Live-update the course progress mini-bar in the header ──
+        try {
+          var pr   = await fetch('/api/course_progress/' + COURSE_ID);
+          var prog = await pr.json();
+          var fill = document.querySelector('.lesson-course-prog-fill');
+          var text = document.getElementById('course-prog-text');
+          var pct  = document.getElementById('course-prog-pct');
+          if (fill) fill.style.width = prog.percent + '%';
+          if (pct)  pct.textContent  = prog.percent + '%';
+          if (text) text.textContent = prog.completed + ' of ' + prog.total + ' lessons completed';
+          if (prog.percent === 100) {
+            setTimeout(function() { Toast.success('🏆 You have completed this course!'); }, 700);
+          }
+        } catch(e) { /* non-critical */ }
+      } else {
+        btn.disabled  = false;
+        btn.innerHTML = 'Mark Complete';
+        Toast.error(result.message || 'Could not save. Please try again.');
+      }
+    } catch (e) {
+      btn.disabled  = false;
+      btn.innerHTML = 'Mark Complete';
+      Toast.error('Network error. Please try again.');
+    }
+  }
+
+  // ── 4. AI CHAT — patch Chatbot to include lesson + course context ──
+  document.addEventListener('DOMContentLoaded', function() {
+
+    // Start the time display ticker
+    _timeInterval = setInterval(updateTimeDisplay, 1000);
+    updateTimeDisplay();
+
+    // Init quiz progress bar
+    if (TOTAL_QUESTIONS > 0) lessonQuiz.updateProgress();
+
+    // Patch Chatbot.send to include lesson context in every API call
+    Chatbot.send = async function() {
+      var input    = document.getElementById('chat-input');
+      var messages = document.getElementById('chat-messages');
+      var msg      = input.value.trim();
+      if (!msg) return;
+
+      Chatbot.addMessage(msg, 'user');
+      input.value = '';
+
+      var typingId = 'typing-' + Date.now();
+      messages.insertAdjacentHTML('beforeend',
+        '<div class="chat-msg bot" id="' + typingId + '"><span class="spinner"></span> Thinking…</div>');
+      messages.scrollTop = messages.scrollHeight;
+
+      try {
+        var r = await fetch('/api/chat', {
+          method:  'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body:    JSON.stringify({
+            message:      msg,
+            lesson_title: LESSON_TITLE,
+            course_title: COURSE_TITLE
+          })
+        });
+        var data = await r.json();
+        var el   = document.getElementById(typingId);
+        if (el) el.remove();
+        Chatbot.addMessage(data.reply || 'Sorry, I could not get a response.', 'bot');
+      } catch (e) {
+        var el = document.getElementById(typingId);
+        if (el) el.remove();
+        Chatbot.addMessage('Network error — please check your connection.', 'bot');
+      }
+    };
+  });
+</script>
+
+<!-- ── Mobile Bottom Nav ── -->
+<nav class="bottom-nav" aria-label="Mobile navigation">
+  <div class="bottom-nav-inner">
+    <a href="/dashboard" class="bottom-nav-item active">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg>
+      Dashboard
+    </a>
+    <a href="/support" class="bottom-nav-item ">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="m3 21 1.9-5.7a8.5 8.5 0 1 1 3.8 3.8z"/></svg>
+      Support
+    </a>
+    <button class="bottom-nav-item" onclick="openDrawer()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M20 21a8 8 0 1 0-16 0"/></svg>
+      Menu
+    </button>
+  </div>
+</nav>
+
+<!-- ── Mobile Drawer ── -->
+<div class="nav-drawer" id="nav-drawer">
+  <div class="nav-drawer-backdrop" onclick="closeDrawer()"></div>
+  <div class="nav-drawer-panel">
+    <button class="nav-drawer-close" onclick="closeDrawer()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+    </button>
+    <div style="font-size:0.7rem;color:var(--text-3);text-transform:uppercase;letter-spacing:0.1em;padding:0 14px;margin-bottom:6px">{{ username }}</div>
+    <a href="/dashboard" class="nav-drawer-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg>
+      Dashboard
+    </a>
+    <a href="/support" class="nav-drawer-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m3 21 1.9-5.7a8.5 8.5 0 1 1 3.8 3.8z"/></svg>
+      Support
+    </a>
+    <hr class="nav-drawer-divider">
+    <button class="nav-drawer-item" onclick="Theme.toggle(); closeDrawer()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+      Toggle Theme
+    </button>
+    <hr class="nav-drawer-divider">
+    <a href="/logout" class="nav-drawer-item danger">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+      Sign Out
+    </a>
+  </div>
+</div>
+
+<script>
+function openDrawer() {
+  var d = document.getElementById('nav-drawer');
+  if (d) { d.classList.add('open'); document.body.style.overflow = 'hidden'; }
+}
+function closeDrawer() {
+  var d = document.getElementById('nav-drawer');
+  if (d) { d.classList.remove('open'); document.body.style.overflow = ''; }
+}
+// Close on Escape key
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape') closeDrawer();
+});
+</script>
+
+</body>
+</html>

@@ -1,0 +1,266 @@
+{% from "_icons.html" import icon, course_icon %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>iLEARN — {{ course.title }}</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}">
+  <script src="{{ url_for('static', filename='js/theme.js') }}"></script>
+  <style>
+    .course-hero {
+      background: var(--bg-2); border: 1px solid var(--border);
+      border-radius: var(--radius-xl); padding: 2rem 2.5rem;
+      margin-bottom: 1.75rem; position: relative; overflow: hidden;
+    }
+    .course-hero::before {
+      content: ''; position: absolute; inset: 0;
+      background: linear-gradient(135deg, rgba(79,172,254,0.05), rgba(167,139,250,0.04));
+      pointer-events: none;
+    }
+    .course-hero-inner { position: relative; z-index: 1; }
+    .course-hero h1 { font-size: 1.8rem; margin-bottom: 0.5rem; }
+    .course-hero p  { color: var(--text-2); font-size: 0.93rem; line-height: 1.65; max-width: 580px; }
+
+    .lesson-list { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-xl); overflow: hidden; }
+    .lesson-list-hd { padding: 1rem 1.5rem; border-bottom: 1px solid var(--border); font-family: var(--font-display); font-weight: 700; font-size: 0.88rem; }
+    .lesson-row {
+      display: flex; align-items: center; gap: 1rem; padding: 1rem 1.5rem;
+      border-bottom: 1px solid var(--border); transition: background 0.18s;
+      text-decoration: none; color: inherit;
+    }
+    .lesson-row:last-child { border-bottom: none; }
+    .lesson-row:hover:not(.lesson-row-locked) { background: rgba(79,172,254,0.04); }
+    .lesson-row.done { background: rgba(52,211,153,0.03); }
+    .lesson-num {
+      width: 32px; height: 32px; border-radius: 50%; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+      font-family: var(--font-display); font-weight: 700; font-size: 0.8rem;
+    }
+    .lesson-num.done-num   { background: rgba(52,211,153,0.15); border: 2px solid var(--green); color: var(--green); }
+    .lesson-num.active-num { background: rgba(79,172,254,0.1);  border: 2px solid var(--blue); color: var(--blue); }
+    .lesson-num.locked-num { background: var(--surface-3); border: 2px solid var(--border-2); color: var(--text-3); }
+    .lesson-info { flex: 1; }
+    .lesson-name { font-weight: 600; font-size: 0.92rem; color: var(--white); margin-bottom: 2px; }
+    .lesson-row-locked .lesson-name { color: var(--text-3); }
+    .lesson-meta { font-size: 0.76rem; color: var(--text-3); display: flex; align-items: center; gap: 6px; }
+    .lesson-status { font-size: 0.78rem; font-weight: 600; }
+
+    .prog-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-xl); padding: 1.5rem; margin-bottom: 1.5rem; }
+    .prog-pct { font-family: var(--font-display); font-size: 2.5rem; font-weight: 800; background: var(--grad-primary); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+
+    @media (max-width: 700px) {
+      .course-hero { padding: 1.4rem; }
+    }
+  </style>
+</head>
+<body>
+
+<nav class="navbar">
+  <div class="nav-brand">iLEARN<sup>BETA</sup></div>
+  <div class="nav-links">
+    <a href="/dashboard">Dashboard</a>
+    <a href="/support">Support</a>
+  </div>
+  <div class="nav-right">
+    <button class="theme-toggle" id="theme-btn" onclick="Theme.toggle()">Light</button>
+    <a href="/logout" class="btn-nav-logout">Sign Out</a>
+  </div>
+  <!-- Mobile hamburger (shown only on mobile via CSS) -->
+  <button class="nav-hamburger" onclick="openDrawer()" aria-label="Open menu">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+  </button>
+</nav>
+
+<div class="page-wrap" style="max-width:860px">
+
+  <!-- Breadcrumb -->
+  <div class="breadcrumb mb-2">
+    <a href="/dashboard">Dashboard</a>
+    <span>›</span>
+    <span>{{ course.title }}</span>
+  </div>
+
+  <!-- Hero -->
+  <div class="course-hero">
+    <div class="course-hero-inner">
+      <div style="display:flex; align-items:center; gap:0.75rem; margin-bottom:0.75rem;">
+        {{ course_icon(course.icon, "icon-xl") }}
+        <span class="badge badge-{% if course.level == 'Beginner' %}green{% elif 'Advanced' in course.level %}rose{% else %}blue{% endif %}">{{ course.level }}</span>
+      </div>
+      <h1>{{ course.title }}</h1>
+      <p>{{ course.description }}</p>
+    </div>
+  </div>
+
+  <!-- Progress bar -->
+  {% set total = lessons | length %}
+  {% set done  = lessons | selectattr('is_completed') | list | length %}
+  {% set pct   = ((done / total * 100) | int) if total else 0 %}
+  <div class="prog-card">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.6rem;">
+      <div>
+        <div class="prog-pct">{{ pct }}%</div>
+        <div style="font-size:0.8rem; color:var(--text-3);">{{ done }}/{{ total }} lessons completed</div>
+      </div>
+      {% if pct == 100 %}
+      <div style="display:flex; align-items:center; gap:6px; color:var(--green); font-weight:700;">
+        {{ icon("trophy", "icon-lg") }} Course Complete!
+      </div>
+      {% endif %}
+    </div>
+    <div class="progress-track">
+      <div class="progress-fill" data-pct="{{ pct }}" style="width:0%"></div>
+    </div>
+  </div>
+
+  <!-- Lessons grouped by module -->
+  {% if modules %}
+    {% for mod in modules %}
+    {% set mod_lessons = lessons | selectattr('module_id', 'eq', mod.id) | list %}
+    {% if mod_lessons %}
+    <div class="module-group">
+      <div class="module-label">
+        <span class="module-num">{{ mod.module_order }}</span>
+        {{ mod.module_title }}
+      </div>
+      <div class="lesson-list">
+        {% for l in mod_lessons %}
+        {% if l.is_locked %}
+        <div class="lesson-row lesson-row-locked">
+          <div class="lesson-num locked-num">{{ icon("lock", "icon-sm") }}</div>
+          <div class="lesson-info">
+            <div class="lesson-name">{{ l.lesson_title }}</div>
+            <div class="lesson-meta">{{ icon("clock","icon-sm") }} ~{{ l.duration_mins }} min &nbsp;·&nbsp; Complete previous lesson to unlock</div>
+          </div>
+          <div class="lesson-status" style="color:var(--text-3);">{{ icon("lock","icon-sm") }}</div>
+        </div>
+        {% elif l.is_completed %}
+        <a href="/lesson/{{ l.id }}" class="lesson-row done">
+          <div class="lesson-num done-num">{{ icon("check-circle","icon-sm") }}</div>
+          <div class="lesson-info">
+            <div class="lesson-name">{{ l.lesson_title }}</div>
+            <div class="lesson-meta">{{ icon("clock","icon-sm") }} ~{{ l.duration_mins }} min</div>
+          </div>
+          <div class="lesson-status" style="color:var(--green);">Completed</div>
+        </a>
+        {% else %}
+        <a href="/lesson/{{ l.id }}" class="lesson-row">
+          <div class="lesson-num active-num">{{ l.lesson_order }}</div>
+          <div class="lesson-info">
+            <div class="lesson-name">{{ l.lesson_title }}</div>
+            <div class="lesson-meta">{{ icon("clock","icon-sm") }} ~{{ l.duration_mins }} min</div>
+          </div>
+          <div class="lesson-status" style="color:var(--blue);">{{ icon("chevron-right","icon-sm") }}</div>
+        </a>
+        {% endif %}
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+    {% endfor %}
+  {% else %}
+  <!-- Fallback: no modules, flat list -->
+  <div class="lesson-list">
+    <div class="lesson-list-hd">{{ icon("book-open","icon-sm") }} Lessons</div>
+    {% for l in lessons %}
+    {% if l.is_locked %}
+    <div class="lesson-row lesson-row-locked">
+      <div class="lesson-num locked-num">{{ icon("lock","icon-sm") }}</div>
+      <div class="lesson-info">
+        <div class="lesson-name">{{ l.lesson_title }}</div>
+        <div class="lesson-meta">{{ icon("clock","icon-sm") }} ~{{ l.duration_mins }} min &nbsp;·&nbsp; Locked</div>
+      </div>
+    </div>
+    {% elif l.is_completed %}
+    <a href="/lesson/{{ l.id }}" class="lesson-row done">
+      <div class="lesson-num done-num">{{ icon("check-circle","icon-sm") }}</div>
+      <div class="lesson-info">
+        <div class="lesson-name">{{ l.lesson_title }}</div>
+        <div class="lesson-meta">{{ icon("clock","icon-sm") }} ~{{ l.duration_mins }} min</div>
+      </div>
+      <div class="lesson-status" style="color:var(--green);">Completed</div>
+    </a>
+    {% else %}
+    <a href="/lesson/{{ l.id }}" class="lesson-row">
+      <div class="lesson-num active-num">{{ l.lesson_order }}</div>
+      <div class="lesson-info">
+        <div class="lesson-name">{{ l.lesson_title }}</div>
+        <div class="lesson-meta">{{ icon("clock","icon-sm") }} ~{{ l.duration_mins }} min</div>
+      </div>
+      <div class="lesson-status" style="color:var(--blue);">{{ icon("chevron-right","icon-sm") }}</div>
+    </a>
+    {% endif %}
+    {% endfor %}
+  </div>
+  {% endif %}
+
+</div>
+
+<div id="toast"></div>
+<script src="{{ url_for('static', filename='js/main.js') }}"></script>
+
+<!-- ── Mobile Bottom Nav ── -->
+<nav class="bottom-nav" aria-label="Mobile navigation">
+  <div class="bottom-nav-inner">
+    <a href="/dashboard" class="bottom-nav-item active">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg>
+      Dashboard
+    </a>
+    <a href="/support" class="bottom-nav-item ">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="m3 21 1.9-5.7a8.5 8.5 0 1 1 3.8 3.8z"/></svg>
+      Support
+    </a>
+    <button class="bottom-nav-item" onclick="openDrawer()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M20 21a8 8 0 1 0-16 0"/></svg>
+      Menu
+    </button>
+  </div>
+</nav>
+
+<!-- ── Mobile Drawer ── -->
+<div class="nav-drawer" id="nav-drawer">
+  <div class="nav-drawer-backdrop" onclick="closeDrawer()"></div>
+  <div class="nav-drawer-panel">
+    <button class="nav-drawer-close" onclick="closeDrawer()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+    </button>
+    <div style="font-size:0.7rem;color:var(--text-3);text-transform:uppercase;letter-spacing:0.1em;padding:0 14px;margin-bottom:6px">{{ username }}</div>
+    <a href="/dashboard" class="nav-drawer-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg>
+      Dashboard
+    </a>
+    <a href="/support" class="nav-drawer-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m3 21 1.9-5.7a8.5 8.5 0 1 1 3.8 3.8z"/></svg>
+      Support
+    </a>
+    <hr class="nav-drawer-divider">
+    <button class="nav-drawer-item" onclick="Theme.toggle(); closeDrawer()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+      Toggle Theme
+    </button>
+    <hr class="nav-drawer-divider">
+    <a href="/logout" class="nav-drawer-item danger">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+      Sign Out
+    </a>
+  </div>
+</div>
+
+<script>
+function openDrawer() {
+  var d = document.getElementById('nav-drawer');
+  if (d) { d.classList.add('open'); document.body.style.overflow = 'hidden'; }
+}
+function closeDrawer() {
+  var d = document.getElementById('nav-drawer');
+  if (d) { d.classList.remove('open'); document.body.style.overflow = ''; }
+}
+// Close on Escape key
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape') closeDrawer();
+});
+</script>
+
+</body>
+</html>

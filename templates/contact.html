@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>iLEARN — Contact & Feedback</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}">
+  <script src="{{ url_for('static', filename='js/theme.js') }}"></script>
+  <style>
+    .contact-wrap {
+      max-width: 700px; margin: 0 auto;
+    }
+    .contact-hero {
+      background: var(--bg-2); border: 1px solid var(--border);
+      border-radius: var(--radius-xl); padding: 2rem 2.5rem;
+      margin-bottom: 1.5rem; position: relative; overflow: hidden;
+    }
+    .contact-hero::before {
+      content: ''; position: absolute; inset: 0;
+      background: linear-gradient(135deg, rgba(167,139,250,0.06), rgba(79,172,254,0.05));
+      pointer-events: none;
+    }
+    .contact-hero::after {
+      content: '💬'; position: absolute; right: 2.5rem; top: 50%;
+      transform: translateY(-50%); font-size: 6rem; opacity: 0.06; pointer-events: none;
+    }
+    .contact-hero-inner { position: relative; z-index: 1; }
+    .contact-hero h1 { font-size: 1.7rem; margin-bottom: 0.4rem; }
+    .contact-hero p  { color: var(--text-2); font-size: 0.9rem; max-width: 480px; }
+
+    .contact-card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius-xl); padding: 2rem 2.2rem;
+    }
+
+    .form-group { margin-bottom: 1.2rem; }
+    .form-label {
+      display: block; font-size: 0.82rem; font-weight: 600;
+      color: var(--text-2); margin-bottom: 0.4rem;
+      text-transform: uppercase; letter-spacing: 0.05em;
+    }
+    .form-label .required { color: var(--rose); margin-left: 2px; }
+
+    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+
+    textarea.form-input {
+      resize: vertical; min-height: 130px; font-family: var(--font-body);
+    }
+
+    .char-count {
+      font-size: 0.72rem; color: var(--text-3); text-align: right;
+      margin-top: 4px;
+    }
+    .char-count.warn { color: var(--amber); }
+
+    .submit-row {
+      display: flex; align-items: center; justify-content: space-between;
+      flex-wrap: wrap; gap: 0.75rem; margin-top: 1.5rem;
+      padding-top: 1.25rem; border-top: 1px solid var(--border);
+    }
+    .submit-hint { font-size: 0.8rem; color: var(--text-3); }
+
+    /* Alert boxes */
+    .alert {
+      border-radius: var(--radius-lg); padding: 0.9rem 1.2rem;
+      margin-bottom: 1.25rem; font-size: 0.88rem; display: flex;
+      align-items: flex-start; gap: 0.6rem;
+    }
+    .alert-success {
+      background: rgba(52,211,153,0.08);
+      border: 1px solid rgba(52,211,153,0.25);
+      color: var(--green);
+    }
+    .alert-error {
+      background: rgba(248,113,113,0.08);
+      border: 1px solid rgba(248,113,113,0.25);
+      color: var(--rose);
+    }
+
+    /* Subject options */
+    .subject-options {
+      display: flex; flex-wrap: wrap; gap: 0.4rem; margin-bottom: 0.5rem;
+    }
+    .subject-chip {
+      padding: 5px 14px; border-radius: 99px; font-size: 0.78rem;
+      background: var(--surface-2); border: 1px solid var(--border);
+      color: var(--text-2); cursor: pointer; transition: all 0.2s;
+    }
+    .subject-chip:hover { border-color: var(--blue); color: var(--blue); }
+    .subject-chip.selected {
+      background: rgba(79,172,254,0.12);
+      border-color: rgba(79,172,254,0.35); color: var(--blue);
+    }
+
+    @media (max-width: 540px) {
+      .form-row { grid-template-columns: 1fr; }
+      .contact-hero { padding: 1.4rem; }
+      .contact-hero::after { display: none; }
+      .contact-card { padding: 1.3rem; }
+    }
+  </style>
+</head>
+<body>
+
+<nav class="navbar">
+  <div class="nav-brand">iLEARN<sup>BETA</sup></div>
+  <div class="nav-links">
+    <a href="/dashboard">Dashboard</a>
+    <a href="/support">Support</a>
+    <a href="/contact" class="active">Contact</a>
+  </div>
+  <div class="nav-right">
+    <div class="nav-avatar">{{ (full_name or username)[0].upper() }}</div>
+    <span class="nav-username">{{ full_name or username }}</span>
+    <button class="theme-toggle" onclick="Theme.toggle()">☀️ Light mode</button>
+    <a href="/logout" class="btn-nav-logout">Sign Out</a>
+  </div>
+</nav>
+
+<div class="page-wrap">
+<div class="contact-wrap">
+
+  <!-- Hero -->
+  <div class="contact-hero">
+    <div class="contact-hero-inner">
+      <div style="font-size:0.78rem; color:var(--purple); text-transform:uppercase; letter-spacing:0.1em; font-weight:600; margin-bottom:0.35rem">Get in touch</div>
+      <h1>Contact &amp; Feedback</h1>
+      <p>Found a bug, have a suggestion, or need help with a lesson? Send us a message and we'll get back to you.</p>
+    </div>
+  </div>
+
+  <!-- Alerts -->
+  {% if success %}
+  <div class="alert alert-success">
+    <span>✅</span>
+    <span>{{ success }}</span>
+  </div>
+  {% endif %}
+  {% if error %}
+  <div class="alert alert-error">
+    <span>❌</span>
+    <span>{{ error }}</span>
+  </div>
+  {% endif %}
+
+  <!-- Form -->
+  <div class="contact-card">
+    <form method="POST" action="/contact" id="contact-form">
+      <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label" for="name">Full Name <span class="required">*</span></label>
+          <input class="form-input" type="text" id="name" name="name"
+            placeholder="Your full name" required
+            value="{{ user.full_name or '' }}">
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="email">Email Address <span class="required">*</span></label>
+          <input class="form-input" type="email" id="email" name="email"
+            placeholder="your@email.com" required
+            value="{{ user.email or '' }}">
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Subject <span class="required">*</span></label>
+        <!-- Quick-pick chips -->
+        <div class="subject-options" id="subject-chips">
+          <span class="subject-chip" onclick="setSubject('Bug Report', this)">🐛 Bug Report</span>
+          <span class="subject-chip" onclick="setSubject('Lesson Feedback', this)">📚 Lesson Feedback</span>
+          <span class="subject-chip" onclick="setSubject('Feature Request', this)">💡 Feature Request</span>
+          <span class="subject-chip" onclick="setSubject('General Question', this)">❓ General Question</span>
+          <span class="subject-chip" onclick="setSubject('Account Issue', this)">🔑 Account Issue</span>
+        </div>
+        <input class="form-input" type="text" id="subject" name="subject"
+          placeholder="Or type your own subject…" required
+          oninput="clearChips()" style="margin-top:0.4rem">
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="message">Message <span class="required">*</span></label>
+        <textarea class="form-input" id="message" name="message"
+          placeholder="Describe your issue, suggestion, or question in detail…"
+          required minlength="10" maxlength="2000"
+          oninput="updateCharCount(this)"></textarea>
+        <div class="char-count" id="char-count">0 / 2000 characters</div>
+      </div>
+
+      <div class="submit-row">
+        <span class="submit-hint">🔒 Your message is stored securely and only visible to the iLEARN team.</span>
+        <button type="submit" class="btn btn-primary" id="submit-btn">
+          Send Message ➤
+        </button>
+      </div>
+
+    </form>
+  </div>
+
+  <!-- Admin shortcut -->
+  {% if username == 'admin' %}
+  <div style="margin-top:1.25rem; text-align:center">
+    <a href="/admin/messages" class="btn btn-ghost btn-sm">🛡 View all submissions (admin)</a>
+  </div>
+  {% endif %}
+
+</div>
+</div>
+
+<div id="toast"></div>
+<script src="{{ url_for('static', filename='js/main.js') }}"></script>
+<script>
+  function setSubject(text, chip) {
+    document.getElementById('subject').value = text;
+    document.querySelectorAll('.subject-chip').forEach(function(c) { c.classList.remove('selected'); });
+    chip.classList.add('selected');
+  }
+
+  function clearChips() {
+    document.querySelectorAll('.subject-chip').forEach(function(c) { c.classList.remove('selected'); });
+  }
+
+  function updateCharCount(textarea) {
+    var count = textarea.value.length;
+    var el    = document.getElementById('char-count');
+    el.textContent = count + ' / 2000 characters';
+    el.classList.toggle('warn', count > 1800);
+  }
+
+  // Prevent double-submit
+  document.getElementById('contact-form').addEventListener('submit', function() {
+    var btn      = document.getElementById('submit-btn');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner"></span> Sending…';
+  });
+</script>
+</body>
+</html>
