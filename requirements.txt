@@ -3,6 +3,7 @@
 
 # ── Web Framework (Python) ──────────────────────────
 flask>=2.3.0
+gunicorn
 
 # ── Data Science & Analytics (Python) ──────────────
 pandas>=2.0.0
