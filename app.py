@@ -1523,6 +1523,96 @@ def add_security_headers(response):
     response.headers.pop("Server", None)
     return response
 
+# ========== PASSWORD RESET ENDPOINTS ==========
+
+# Initialize password reset manager AFTER DATABASE is defined
+from password_reset import PasswordResetManager
+from dotenv import load_dotenv
+import os
+
+load_dotenv()
+password_reset_manager = PasswordResetManager(DATABASE)
+
+@app.route('/api/forgot-password', methods=['POST'])
+def api_forgot_password():
+    """Handle forgot password requests"""
+    try:
+        data = request.json
+        email = data.get('email', '').strip().lower()
+        
+        if not email:
+            return jsonify({"success": False, "error": "Email is required"}), 400
+        
+        # Create reset token
+        user = password_reset_manager.get_user_by_email(email)
+        
+        if user:
+            reset_token = password_reset_manager.generate_reset_token()
+            password_reset_manager.create_reset_token(user[0], email)
+            
+            # Build reset URL for frontend
+            frontend_url = os.getenv('FRONTEND_URL', 'https://ilearn-nextjs-c19j.vercel.app')
+            reset_url = f"{frontend_url}/forgot-password?token={reset_token}"
+            
+            # Send email via Resend
+            email_result = password_reset_manager.send_reset_email(email, user[1], reset_token, reset_url)
+            
+            if not email_result.get('success'):
+                print(f"[Password Reset] Email send failed: {email_result.get('error')}")
+        
+        # Always return same message for security (don't reveal if email exists)
+        return jsonify({
+            "success": True,
+            "message": "If an account with this email exists, you'll receive a password reset link shortly."
+        }), 200
+        
+    except Exception as e:
+        print(f"[Password Reset Error] {str(e)}")
+        return jsonify({"success": False, "error": str(e)}), 500
+
+@app.route('/api/verify-reset-token/<token>', methods=['GET'])
+def api_verify_reset_token(token):
+    """Verify if a reset token is valid"""
+    try:
+        is_valid = password_reset_manager.verify_reset_token(token)
+        
+        if is_valid:
+            return jsonify({"valid": True, "message": "Token is valid"}), 200
+        else:
+            return jsonify({"valid": False, "message": "Token has expired or is invalid"}), 400
+            
+    except Exception as e:
+        print(f"[Token Verification Error] {str(e)}")
+        return jsonify({"valid": False, "error": str(e)}), 500
+
+@app.route('/api/reset-password', methods=['POST'])
+def api_reset_password():
+    """Handle password reset"""
+    try:
+        data = request.json
+        token = data.get('token', '').strip()
+        new_password = data.get('password', '').strip()
+        
+        if not token or not new_password:
+            return jsonify({"success": False, "error": "Token and password are required"}), 400
+        
+        if len(new_password) < 8:
+            return jsonify({"success": False, "error": "Password must be at least 8 characters"}), 400
+        
+        # Reset the password
+        result = password_reset_manager.reset_password(token, new_password)
+        
+        if result['success']:
+            return jsonify({"success": True, "message": "Password reset successfully"}), 200
+        else:
+            return jsonify({"success": False, "error": result.get('error', 'Failed to reset password')}), 400
+            
+    except Exception as e:
+        print(f"[Password Reset Error] {str(e)}")
+        return jsonify({"success": False, "error": str(e)}), 500
+
+# ========== END PASSWORD RESET ENDPOINTS ==========
+
 init_db()
 
 if __name__ == "__main__":
